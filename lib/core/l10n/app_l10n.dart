@@ -273,6 +273,9 @@ abstract class AppL10n {
     'set_next_visit':    {'en': 'Tap to set next visit date','fr': 'Appuyer pour définir la date','rw': 'Kanda ushyire itariki y\'inzyuro ikurikira'},
     'save_visit':        {'en': 'Save Visit',         'fr': 'Enregistrer la Visite','rw': 'Bika Inzyuro'},
     'visit_saved':       {'en': 'Home visit recorded successfully','fr': 'Visite enregistrée avec succès','rw': 'Inzyuro y\'urugo yanditsweko'},
+    'visit_queued':      {'en': 'No connection — visit saved locally and will sync automatically','fr': 'Pas de connexion — visite enregistrée localement, synchronisation automatique','rw': 'Nta interineti — inzyuro yabitswe aho uri, izahuzwa ubwo bwacu nahabamo interineti'},
+    'dose_queued':       {'en': 'No connection — confirmation saved locally and will sync automatically','fr': 'Pas de connexion — confirmation enregistrée localement, synchronisation automatique','rw': 'Nta interineti — kwemeza kwabitswe aho uri, kuzahuzwa ubwo hazagaruka interineti'},
+    'pending_sync_warning': {'en': 'You have unsynced data. Logging out now may lose it once back online. Log out anyway?','fr': 'Vous avez des données non synchronisées. Se déconnecter maintenant peut les perdre. Continuer ?','rw': 'Ufite amakuru atarahuzwa. Gusohoka ubu bishobora kuyatakaza. Wifuza gusohoka?'},
     'schedule_next':     {'en': 'Schedule the next home visit','fr': 'Planifier la prochaine visite','rw': 'Shyiraho inzyuro ikurikira'},
     'notes_optional':    {'en': 'Notes (optional)',   'fr': 'Notes (optionnel)',   'rw': 'Ibisobanuro (ntibisabwa)'},
     'record_pill_count_subtitle':{'en': 'Enable to check for discrepancies','fr': 'Activer pour vérifier les écarts','rw': 'Fungura kugira ngo urebe itandukaniro'},
@@ -328,6 +331,7 @@ abstract class AppL10n {
     'tb_no_signs':       {'en': 'No TB signs',          'fr': 'Aucun signe de TB',    'rw': 'Nta bimenyetso bya TB'},
     'screening_notes_optional':{'en': 'Screening notes (optional)','fr': 'Notes de dépistage (optionnel)','rw': 'Inyandiko z\'isuzuma (ntibisabwa)'},
     'screening_notes_hint':{'en': 'Describe what you observed: symptoms, duration, family history…','fr': 'Décrivez ce que vous avez observé : symptômes, durée, antécédents familiaux…','rw': 'Sobanura ibyo wabonye: ibimenyetso, igihe, amateka y\'umuryango…'},
+    'dob_required':        {'en': 'Date of birth is required', 'fr': 'La date de naissance est requise', 'rw': 'Itariki y\'amavuko irakenewe'},
 
     // ── CHW Alerts ────────────────────────────────────────────────────────
     'my_alerts':         {'en': 'My Alerts',          'fr': 'Mes Alertes',         'rw': 'Inzangirutsa Zanjye'},

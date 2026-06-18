@@ -71,4 +71,14 @@ class AdminRepository {
         .map((e) => AlertModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  Future<SystemSettingsModel> getSettings() async {
+    final res = await _client.get(ApiEndpoints.adminSettings);
+    return SystemSettingsModel.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<SystemSettingsModel> updateSettings(SystemSettingsModel settings) async {
+    final res = await _client.put(ApiEndpoints.adminSettings, data: settings.toJson());
+    return SystemSettingsModel.fromJson(res.data as Map<String, dynamic>);
+  }
 }

@@ -106,6 +106,21 @@ class _PatientConfirmScreenState extends ConsumerState<PatientConfirmScreen>
           ),
         );
       }
+      if (next.queuedMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(children: [
+              const Icon(Icons.cloud_off_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(l('dose_queued'))),
+            ]),
+            backgroundColor: AppColors.warning,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
       if (next.error != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

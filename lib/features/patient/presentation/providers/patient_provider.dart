@@ -12,6 +12,7 @@ class PatientHomeState {
   final PatientModel? profile;
   final String? error;
   final String? successMessage;
+  final String? queuedMessage;
 
   const PatientHomeState({
     this.isLoading = false,
@@ -20,6 +21,7 @@ class PatientHomeState {
     this.profile,
     this.error,
     this.successMessage,
+    this.queuedMessage,
   });
 
   PatientHomeState copyWith({
@@ -29,6 +31,7 @@ class PatientHomeState {
     PatientModel? profile,
     String? error,
     String? successMessage,
+    String? queuedMessage,
   }) =>
       PatientHomeState(
         isLoading: isLoading ?? this.isLoading,
@@ -37,6 +40,7 @@ class PatientHomeState {
         profile: profile ?? this.profile,
         error: error,
         successMessage: successMessage,
+        queuedMessage: queuedMessage,
       );
 
   int get confirmedCount => todaySchedule.where((d) => d.isConfirmed).length;
@@ -70,7 +74,7 @@ class PatientHomeNotifier extends StateNotifier<PatientHomeState> {
   Future<void> confirmDose(DoseScheduleModel dose) async {
     try {
       final now = DateTime.now();
-      await _repo.confirmDose(scheduleId: dose.id);
+      final queued = await _repo.confirmDose(scheduleId: dose.id);
       final updated = state.todaySchedule.map((d) {
         if (d.id == dose.id) {
           return DoseScheduleModel(
@@ -87,10 +91,9 @@ class PatientHomeNotifier extends StateNotifier<PatientHomeState> {
         }
         return d;
       }).toList();
-      state = state.copyWith(
-        todaySchedule: updated,
-        successMessage: 'Dose confirmed successfully!',
-      );
+      state = queued
+          ? state.copyWith(todaySchedule: updated, queuedMessage: 'queued')
+          : state.copyWith(todaySchedule: updated, successMessage: 'Dose confirmed successfully!');
     } catch (_) {
       state = state.copyWith(error: 'Failed to confirm dose. Try again.');
     }

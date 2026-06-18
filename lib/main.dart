@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/notifications/fcm_service.dart';
+import 'core/offline/sync_manager.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_routes.dart';
@@ -38,6 +39,7 @@ class HivTBApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.read(syncManagerProvider); // starts the offline outbox flush loop
     ref.listen<AuthState>(authProvider, (prev, next) {
       if (!next.isAuthenticated && (prev?.isAuthenticated ?? false)) {
         appRouter.go(AppRoutes.login);

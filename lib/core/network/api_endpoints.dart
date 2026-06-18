@@ -75,6 +75,7 @@ abstract class ApiEndpoints {
   static String adminResetPassword(String id) => '/api/admin/users/$id/reset-password';
   static const String allPatients = '/api/admin/users/patients';
   static String patientVisits(String id) => '/api/admin/users/patients/$id/visits';
+  static const String adminSettings = '/api/admin/settings';
   // Admin LTFU monitoring
   static const String supervisorEscalated = '/api/tracing/supervisor/escalated';
   static const String supervisorLtfuConfirmed = '/api/tracing/supervisor/ltfu-confirmed';

@@ -48,6 +48,7 @@ class HomeVisitModel {
   final String? chwId;
   final String? chwName;
   final DateTime visitDate;
+  final String visitStatus;
   final String adherenceStatus;
   final int? pillCountRecorded;
   final int? pillCountExpected;
@@ -67,6 +68,7 @@ class HomeVisitModel {
     this.chwId,
     this.chwName,
     required this.visitDate,
+    this.visitStatus = 'ATTENDED_TO',
     required this.adherenceStatus,
     this.pillCountRecorded,
     this.pillCountExpected,
@@ -87,6 +89,7 @@ class HomeVisitModel {
         chwId: json['chwId'] as String?,
         chwName: json['chwName'] as String?,
         visitDate: DateTime.parse(json['visitDate'] as String),
+        visitStatus: json['visitStatus'] as String? ?? 'ATTENDED_TO',
         adherenceStatus: json['adherenceStatus'] as String? ?? 'UNKNOWN',
         pillCountRecorded: json['pillCountRecorded'] as int?,
         pillCountExpected: json['pillCountExpected'] as int?,

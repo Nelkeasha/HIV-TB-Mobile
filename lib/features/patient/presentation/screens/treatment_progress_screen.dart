@@ -58,6 +58,10 @@ class _TreatmentProgressScreenState
           ),
           data: (historyList) {
             final dailyRates = _computeDailyRates(historyList);
+            final adherencePct = state.riskScore?.adherencePct.toInt()
+                ?? _computeAdherence30dPct(historyList);
+            final missedCount = state.riskScore?.missedDoses30d
+                ?? historyList.where((h) => h.isMissed).length;
 
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
@@ -75,8 +79,7 @@ class _TreatmentProgressScreenState
                       child: _StatCard(
                         icon: Icons.check_circle_rounded,
                         color: AppColors.riskLow,
-                        value:
-                            '${state.riskScore?.adherencePct.toInt() ?? 0}%',
+                        value: '$adherencePct%',
                         label: l('adherence_30d'),
                       ),
                     ),
@@ -85,7 +88,7 @@ class _TreatmentProgressScreenState
                       child: _StatCard(
                         icon: Icons.warning_rounded,
                         color: AppColors.riskHigh,
-                        value: '${state.riskScore?.missedDoses30d ?? 0}',
+                        value: '$missedCount',
                         label: l('stat_missed_30d'),
                       ),
                     ),
@@ -133,6 +136,17 @@ class _TreatmentProgressScreenState
         ),
       ),
     );
+  }
+
+  int _computeAdherence30dPct(List<ConfirmationHistoryModel> history) {
+    final cutoff = DateTime.now().subtract(const Duration(days: 30));
+    final recent = history.where((h) {
+      final date = h.confirmedAt ??
+          (h.scheduledDate != null ? DateTime.tryParse(h.scheduledDate!) : null);
+      return date != null && date.isAfter(cutoff);
+    }).toList();
+    if (recent.isEmpty) return 0;
+    return ((recent.where((h) => !h.isMissed).length / recent.length) * 100).round();
   }
 
   Map<int, double> _computeDailyRates(List<ConfirmationHistoryModel> history) {

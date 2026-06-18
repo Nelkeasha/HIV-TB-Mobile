@@ -552,6 +552,22 @@ class _VisitTile extends StatelessWidget {
                       fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
+              Container(
+                margin: const EdgeInsets.only(right: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.riskLowBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  v.visitStatus,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.riskLow,
+                  ),
+                ),
+              ),
               _AdherenceBadge(status: v.adherenceStatus),
               if (v.pillCountDiscrepancy) ...[
                 const SizedBox(width: 6),

@@ -255,15 +255,27 @@ class _AppBar extends StatelessWidget {
 
 // ── Adherence Hero ────────────────────────────────────────────────────────────
 
-class _AdherenceHero extends StatelessWidget {
+class _AdherenceHero extends ConsumerWidget {
   final PatientHomeState state;
   final String lang;
   const _AdherenceHero({required this.state, required this.lang});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = (String k) => AppL10n.t(k, lang);
-    final adherence = state.riskScore?.adherencePct ?? 0;
+    final fallback = ref.watch(confirmationHistoryProvider).whenOrNull(
+      data: (history) {
+        final cutoff = DateTime.now().subtract(const Duration(days: 30));
+        final recent = history.where((h) {
+          final date = h.confirmedAt ??
+              (h.scheduledDate != null ? DateTime.tryParse(h.scheduledDate!) : null);
+          return date != null && date.isAfter(cutoff);
+        }).toList();
+        if (recent.isEmpty) return 0.0;
+        return (recent.where((h) => !h.isMissed).length / recent.length) * 100;
+      },
+    );
+    final adherence = state.riskScore?.adherencePct ?? fallback ?? 0;
     final riskLevel = state.riskScore?.riskLevel ?? 'LOW';
     final recommendation = state.riskScore?.recommendedAction;
 

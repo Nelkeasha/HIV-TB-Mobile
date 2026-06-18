@@ -247,6 +247,8 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen>
                               validator: (v) {
                                 if (v == null || v.isEmpty) return AppL10n.t('enter_new_pass', lang);
                                 if (v.length < 8) return AppL10n.t('pass_min_chars', lang);
+                                if (!v.contains(RegExp(r'[A-Z]'))) return AppL10n.t('rule_uppercase', lang);
+                                if (!v.contains(RegExp(r'[0-9]'))) return AppL10n.t('rule_number', lang);
                                 return null;
                               },
                               textInputAction: TextInputAction.next,

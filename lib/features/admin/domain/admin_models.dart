@@ -308,6 +308,39 @@ class AdminReportModel {
       );
 }
 
+class SystemSettingsModel {
+  final int missedDoseThreshold;
+  final int lowStockDays;
+  final int confirmWindowMinutes;
+  final int highRiskThreshold;
+  final int criticalRiskThreshold;
+
+  const SystemSettingsModel({
+    required this.missedDoseThreshold,
+    required this.lowStockDays,
+    required this.confirmWindowMinutes,
+    required this.highRiskThreshold,
+    required this.criticalRiskThreshold,
+  });
+
+  factory SystemSettingsModel.fromJson(Map<String, dynamic> json) =>
+      SystemSettingsModel(
+        missedDoseThreshold: (json['missedDoseThreshold'] as num?)?.toInt() ?? 2,
+        lowStockDays: (json['lowStockDays'] as num?)?.toInt() ?? 14,
+        confirmWindowMinutes: (json['confirmWindowMinutes'] as num?)?.toInt() ?? 45,
+        highRiskThreshold: (json['highRiskThreshold'] as num?)?.toInt() ?? 70,
+        criticalRiskThreshold: (json['criticalRiskThreshold'] as num?)?.toInt() ?? 85,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'missedDoseThreshold': missedDoseThreshold,
+        'lowStockDays': lowStockDays,
+        'confirmWindowMinutes': confirmWindowMinutes,
+        'highRiskThreshold': highRiskThreshold,
+        'criticalRiskThreshold': criticalRiskThreshold,
+      };
+}
+
 // Aggregated stats derived from the user list
 class AdminStats {
   final int totalUsers;

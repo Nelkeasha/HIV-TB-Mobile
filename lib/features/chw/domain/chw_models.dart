@@ -202,6 +202,7 @@ class HomeVisitRequest {
   final String? sideEffectsReported;
   final String? psychosocialNotes;
   final DateTime? nextVisitDate;
+  final String? clientRequestId;
 
   const HomeVisitRequest({
     required this.patientId,
@@ -213,6 +214,7 @@ class HomeVisitRequest {
     this.sideEffectsReported,
     this.psychosocialNotes,
     this.nextVisitDate,
+    this.clientRequestId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -229,6 +231,7 @@ class HomeVisitRequest {
           'psychosocialNotes': psychosocialNotes,
         if (nextVisitDate != null)
           'nextVisitDate': nextVisitDate!.toIso8601String(),
+        if (clientRequestId != null) 'clientRequestId': clientRequestId,
       };
 }
 

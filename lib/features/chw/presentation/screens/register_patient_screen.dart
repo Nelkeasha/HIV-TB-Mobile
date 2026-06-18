@@ -225,6 +225,17 @@ class _RegisterPatientScreenState
         child: Stepper(
           currentStep: _currentStep,
           onStepContinue: () {
+            if (!_formKey.currentState!.validate()) return;
+            if (_currentStep == 0 && _dob == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(l('dob_required')),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              return;
+            }
             if (_currentStep < 2) {
               setState(() => _currentStep++);
             } else {

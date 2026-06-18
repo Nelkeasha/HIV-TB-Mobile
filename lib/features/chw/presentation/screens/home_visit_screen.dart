@@ -71,6 +71,23 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final hasObservation = _symptomsCtrl.text.trim().isNotEmpty ||
+        (_hasSideEffects && _sideEffectsCtrl.text.trim().isNotEmpty) ||
+        _notesCtrl.text.trim().isNotEmpty;
+    if (!hasObservation) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'You must record at least one clinical observation before saving the visit.',
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final req = HomeVisitRequest(
@@ -92,7 +109,7 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
             : _notesCtrl.text.trim(),
         nextVisitDate: _nextVisitDate,
       );
-      await ref.read(chwRepositoryProvider).recordVisit(req);
+      final queued = await ref.read(chwRepositoryProvider).recordVisit(req);
       ref.invalidate(visitHistoryProvider(widget.patientId));
       ref.invalidate(patientDetailProvider(widget.patientId));
       if (mounted) {
@@ -100,11 +117,14 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+              Icon(queued ? Icons.cloud_off_rounded : Icons.check_circle_rounded,
+                  color: Colors.white, size: 18),
               const SizedBox(width: 8),
-              Text(AppL10n.t('visit_saved', lang)),
+              Expanded(
+                child: Text(AppL10n.t(queued ? 'visit_queued' : 'visit_saved', lang)),
+              ),
             ]),
-            backgroundColor: AppColors.success,
+            backgroundColor: queued ? AppColors.warning : AppColors.success,
             behavior: SnackBarBehavior.floating,
           ),
         );

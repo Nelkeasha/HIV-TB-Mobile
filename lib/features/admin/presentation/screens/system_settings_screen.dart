@@ -1,20 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/network/api_client.dart';
+import '../../data/admin_repository.dart';
+import '../../domain/admin_models.dart';
 
-class SystemSettingsScreen extends StatefulWidget {
+class SystemSettingsScreen extends ConsumerStatefulWidget {
   const SystemSettingsScreen({super.key});
 
   @override
-  State<SystemSettingsScreen> createState() => _SystemSettingsScreenState();
+  ConsumerState<SystemSettingsScreen> createState() => _SystemSettingsScreenState();
 }
 
-class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
+class _SystemSettingsScreenState extends ConsumerState<SystemSettingsScreen> {
   // Alert thresholds
   int _missedDoseThreshold = 2;
   int _lowStockDays = 14;
   int _confirmWindowMinutes = 45;
   int _highRiskThreshold = 70;
   int _criticalRiskThreshold = 85;
+
+  bool _loading = true;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final settings = await ref.read(adminRepositoryProvider).getSettings();
+      setState(() {
+        _missedDoseThreshold = settings.missedDoseThreshold;
+        _lowStockDays = settings.lowStockDays;
+        _confirmWindowMinutes = settings.confirmWindowMinutes;
+        _highRiskThreshold = settings.highRiskThreshold;
+        _criticalRiskThreshold = settings.criticalRiskThreshold;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not load settings: ${ApiClient.friendlyError(e)}'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,12 +64,19 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
         title: const Text('System Settings'),
         actions: [
           TextButton(
-            onPressed: _saveSettings,
-            child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+            onPressed: _saving ? null : _saveSettings,
+            child: _saving
+                ? const SizedBox(
+                    width: 16, height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,14 +188,36 @@ class _SystemSettingsScreenState extends State<SystemSettingsScreen> {
     );
   }
 
-  void _saveSettings() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Settings saved successfully'),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  Future<void> _saveSettings() async {
+    setState(() => _saving = true);
+    try {
+      await ref.read(adminRepositoryProvider).updateSettings(SystemSettingsModel(
+            missedDoseThreshold: _missedDoseThreshold,
+            lowStockDays: _lowStockDays,
+            confirmWindowMinutes: _confirmWindowMinutes,
+            highRiskThreshold: _highRiskThreshold,
+            criticalRiskThreshold: _criticalRiskThreshold,
+          ));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Settings saved successfully'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save settings: ${ApiClient.friendlyError(e)}'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   void _comingSoon(BuildContext context) {

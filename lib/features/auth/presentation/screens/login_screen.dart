@@ -152,7 +152,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       const Text(
                         'HIV/TB\nMonitor',
                         style: TextStyle(

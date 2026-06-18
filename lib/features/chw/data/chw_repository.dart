@@ -1,16 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../core/offline/pending_action_db.dart';
+import '../../../core/offline/sync_manager.dart';
+import '../../../core/utils/uuid.dart';
 import '../../../shared/models/alert_model.dart';
 import '../../../shared/models/patient_model.dart';
 import '../domain/chw_models.dart';
 
 final chwRepositoryProvider = Provider<CHWRepository>(
-    (ref) => CHWRepository(ref.read(apiClientProvider)));
+    (ref) => CHWRepository(ref.read(apiClientProvider), ref));
 
 class CHWRepository {
   final ApiClient _client;
-  CHWRepository(this._client);
+  final Ref _ref;
+  CHWRepository(this._client, this._ref);
 
   Future<CHWDashboard> getDashboard() async {
     final r = await _client.get(ApiEndpoints.chwDashboard);
@@ -34,8 +38,37 @@ class CHWRepository {
     return PriorityListResponse.fromJson(r.data as Map<String, dynamic>);
   }
 
-  Future<void> recordVisit(HomeVisitRequest req) async {
-    await _client.post(ApiEndpoints.chwRecordVisit, data: req.toJson());
+  /// Returns true if the visit was queued locally (no connectivity) instead
+  /// of being sent immediately. A 4xx/5xx from a reachable server still
+  /// throws normally — only genuine connectivity failures get queued.
+  Future<bool> recordVisit(HomeVisitRequest req) async {
+    final withRequestId = HomeVisitRequest(
+      patientId: req.patientId,
+      visitDate: req.visitDate,
+      adherenceStatus: req.adherenceStatus,
+      pillCountRecorded: req.pillCountRecorded,
+      pillCountExpected: req.pillCountExpected,
+      symptomsReported: req.symptomsReported,
+      sideEffectsReported: req.sideEffectsReported,
+      psychosocialNotes: req.psychosocialNotes,
+      nextVisitDate: req.nextVisitDate,
+      clientRequestId: req.clientRequestId ?? generateUuidV4(),
+    );
+
+    try {
+      await _client.post(ApiEndpoints.chwRecordVisit, data: withRequestId.toJson());
+      return false;
+    } catch (e) {
+      if (!isConnectivityFailure(e)) rethrow;
+      await PendingActionDb.enqueue(PendingAction(
+        type: PendingActionType.homeVisit,
+        path: ApiEndpoints.chwRecordVisit,
+        payload: withRequestId.toJson(),
+        createdAt: DateTime.now(),
+      ));
+      _ref.read(pendingActionCountProvider.notifier).state++;
+      return true;
+    }
   }
 
   Future<List<HomeVisitModel>> getVisitHistory(String patientId) async {

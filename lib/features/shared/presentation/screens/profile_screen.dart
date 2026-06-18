@@ -5,6 +5,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/l10n/app_l10n.dart';
 import '../../../../core/l10n/l10n_provider.dart';
+import '../../../../core/offline/pending_action_db.dart';
 import '../../../../core/storage/secure_storage.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
@@ -359,15 +360,17 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 
-  void _confirmLogout(BuildContext context, WidgetRef ref, String lang) {
+  void _confirmLogout(BuildContext context, WidgetRef ref, String lang) async {
     final l = (String k) => AppL10n.t(k, lang);
+    final pendingCount = await PendingActionDb.count();
+    if (!context.mounted) return;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(l('sign_out')),
-        content: Text(l('sign_out_confirm')),
+        content: Text(pendingCount > 0 ? l('pending_sync_warning') : l('sign_out_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

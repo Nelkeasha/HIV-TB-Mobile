@@ -1,17 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../core/offline/pending_action_db.dart';
+import '../../../core/offline/sync_manager.dart';
 import '../../../shared/models/alert_model.dart'
     hide DoseScheduleModel;
 import '../../../shared/models/confirmation_model.dart';
 import '../../../shared/models/patient_model.dart';
 
 final patientRepositoryProvider = Provider<PatientRepository>(
-    (ref) => PatientRepository(ref.read(apiClientProvider)));
+    (ref) => PatientRepository(ref.read(apiClientProvider), ref));
 
 class PatientRepository {
   final ApiClient _client;
-  PatientRepository(this._client);
+  final Ref _ref;
+  PatientRepository(this._client, this._ref);
 
   Future<PatientModel?> getProfile() async {
     try {
@@ -30,11 +33,25 @@ class PatientRepository {
         .toList();
   }
 
-  Future<void> confirmDose({required String scheduleId}) async {
-    await _client.post(ApiEndpoints.confirmDose, data: {
-      'scheduleId': scheduleId,
-      'confirmationMethod': 'APP',
-    });
+  /// Returns true if the confirmation was queued locally (no connectivity).
+  /// Already idempotent server-side (one confirmation per schedule per day),
+  /// so no client request id is needed here.
+  Future<bool> confirmDose({required String scheduleId}) async {
+    final payload = {'scheduleId': scheduleId, 'confirmationMethod': 'APP'};
+    try {
+      await _client.post(ApiEndpoints.confirmDose, data: payload);
+      return false;
+    } catch (e) {
+      if (!isConnectivityFailure(e)) rethrow;
+      await PendingActionDb.enqueue(PendingAction(
+        type: PendingActionType.doseConfirmation,
+        path: ApiEndpoints.confirmDose,
+        payload: payload,
+        createdAt: DateTime.now(),
+      ));
+      _ref.read(pendingActionCountProvider.notifier).state++;
+      return true;
+    }
   }
 
   Future<List<ConfirmationHistoryModel>> getConfirmationHistory() async {

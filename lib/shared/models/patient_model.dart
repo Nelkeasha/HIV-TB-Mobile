@@ -87,7 +87,7 @@ class PatientModel {
         nextCHWVisitDate: json['nextCHWVisitDate'] != null
             ? DateTime.tryParse(json['nextCHWVisitDate'] as String)
             : null,
-        registrationStatus: json['registrationStatus'] as String? ?? 'ACTIVE',
+        registrationStatus: json['registrationStatus'] as String? ?? 'CONFIRMED',
         referralId: json['referralId'] as String?,
         suspectedCondition: json['suspectedCondition'] as String?,
         screeningNotes: json['screeningNotes'] as String?,
