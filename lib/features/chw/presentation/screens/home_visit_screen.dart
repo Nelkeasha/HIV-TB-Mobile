@@ -92,7 +92,7 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
     try {
       final req = HomeVisitRequest(
         patientId: widget.patientId,
-        visitDate: DateTime.now(),
+        visitDate: AppDateUtils.nowForServer(),
         adherenceStatus: _adherenceStatus,
         pillCountRecorded:
             _pillCountEnabled ? int.tryParse(_pillRecordedCtrl.text) : null,

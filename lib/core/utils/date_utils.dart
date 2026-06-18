@@ -41,4 +41,16 @@ abstract class AppDateUtils {
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
   }
+
+  /// The backend's `LocalDateTime` fields (e.g. visitDate with @Past) are
+  /// timezone-naive and compared against the server's own UTC clock. Sending
+  /// the device's local wall-clock value as-is makes "now" look like it's in
+  /// the future for any timezone ahead of UTC (e.g. Rwanda, UTC+2) — this
+  /// strips the offset by re-expressing the same instant as a UTC wall-clock
+  /// value, with no 'Z' suffix, so it parses straight into LocalDateTime and
+  /// compares correctly against the server's now().
+  static DateTime nowForServer() {
+    final utc = DateTime.now().toUtc();
+    return DateTime(utc.year, utc.month, utc.day, utc.hour, utc.minute, utc.second, utc.millisecond);
+  }
 }
