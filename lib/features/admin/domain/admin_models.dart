@@ -223,9 +223,10 @@ class AdminReportModel {
   final int warningAlerts;
   final int missedDoseAlerts;
 
-  // Stock
-  final int lowStockItems;
-  final int pendingResupplyRequests;
+  // LTFU tracing
+  final int activeLtfuTasks;
+  final int ltfuConfirmedCount;
+  final int escalatedCount;
 
   const AdminReportModel({
     required this.generatedAt,
@@ -258,8 +259,9 @@ class AdminReportModel {
     required this.criticalAlerts,
     required this.warningAlerts,
     required this.missedDoseAlerts,
-    required this.lowStockItems,
-    required this.pendingResupplyRequests,
+    required this.activeLtfuTasks,
+    required this.ltfuConfirmedCount,
+    required this.escalatedCount,
   });
 
   factory AdminReportModel.fromJson(Map<String, dynamic> json) =>
@@ -302,9 +304,9 @@ class AdminReportModel {
         criticalAlerts: (json['criticalAlerts'] as num?)?.toInt() ?? 0,
         warningAlerts: (json['warningAlerts'] as num?)?.toInt() ?? 0,
         missedDoseAlerts: (json['missedDoseAlerts'] as num?)?.toInt() ?? 0,
-        lowStockItems: (json['lowStockItems'] as num?)?.toInt() ?? 0,
-        pendingResupplyRequests:
-            (json['pendingResupplyRequests'] as num?)?.toInt() ?? 0,
+        activeLtfuTasks: (json['activeLtfuTasks'] as num?)?.toInt() ?? 0,
+        ltfuConfirmedCount: (json['ltfuConfirmedCount'] as num?)?.toInt() ?? 0,
+        escalatedCount: (json['escalatedCount'] as num?)?.toInt() ?? 0,
       );
 }
 

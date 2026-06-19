@@ -88,7 +88,7 @@ class _ReportBody extends StatelessWidget {
         const SizedBox(height: 12),
         _FhirSyncCard(report: report),
         const SizedBox(height: 12),
-        _StockCard(report: report),
+        _LtfuCard(report: report),
         const SizedBox(height: 24),
       ],
     );
@@ -702,31 +702,38 @@ class _FhirBar extends StatelessWidget {
   }
 }
 
-// ── Stock ──────────────────────────────────────────────────────────────────────
+// ── LTFU tracing ───────────────────────────────────────────────────────────────
 
-class _StockCard extends StatelessWidget {
+class _LtfuCard extends StatelessWidget {
   final AdminReportModel report;
-  const _StockCard({required this.report});
+  const _LtfuCard({required this.report});
 
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
-      title: 'Stock',
-      icon: Icons.inventory_2_rounded,
-      iconColor: Colors.brown.shade600,
+      title: 'LTFU Tracing',
+      icon: Icons.person_search_rounded,
+      iconColor: _coral,
       child: Row(children: [
         Expanded(
             child: _SmallStat(
-                label: 'Low-stock Items',
-                value: '${report.lowStockItems}',
-                color: report.lowStockItems > 0
+                label: 'Active Cases',
+                value: '${report.activeLtfuTasks}',
+                color: report.activeLtfuTasks > 0
                     ? _coral
                     : Colors.green.shade600)),
         Expanded(
             child: _SmallStat(
-                label: 'Pending Resupply',
-                value: '${report.pendingResupplyRequests}',
-                color: report.pendingResupplyRequests > 0
+                label: 'Confirmed',
+                value: '${report.ltfuConfirmedCount}',
+                color: report.ltfuConfirmedCount > 0
+                    ? const Color(0xFFB71C1C)
+                    : Colors.green.shade600)),
+        Expanded(
+            child: _SmallStat(
+                label: 'Escalated',
+                value: '${report.escalatedCount}',
+                color: report.escalatedCount > 0
                     ? Colors.amber.shade700
                     : Colors.green.shade600)),
       ]),

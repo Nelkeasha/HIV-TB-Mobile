@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/notifications/fcm_service.dart';
 import '../../../../core/storage/secure_storage.dart';
+import '../../../chw/presentation/providers/chw_provider.dart';
+import '../../../patient/presentation/providers/patient_provider.dart';
 import '../../data/auth_repository.dart';
 
 class AuthState {
@@ -45,11 +47,30 @@ class AuthState {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
+  final Ref _ref;
   final AuthRepository _repo;
   final SecureStorage _storage;
   final ApiClient _apiClient;
 
-  AuthNotifier(this._repo, this._storage, this._apiClient) : super(const AuthState());
+  AuthNotifier(this._ref, this._repo, this._storage, this._apiClient) : super(const AuthState());
+
+  /// Clears every cached role-scoped data provider so a new login (possibly
+  /// a different CHW/patient on the same app session) never sees the
+  /// previous account's dashboard, patient list, or priority list.
+  void _invalidateSessionProviders() {
+    _ref.invalidate(chwDashboardProvider);
+    _ref.invalidate(chwPatientsProvider);
+    _ref.invalidate(priorityListProvider);
+    _ref.invalidate(chwAlertsProvider);
+    _ref.invalidate(patientDetailProvider);
+    _ref.invalidate(visitHistoryProvider);
+    _ref.invalidate(chwPatientReferralsProvider);
+    _ref.invalidate(patientActiveSchedulesProvider);
+    _ref.invalidate(ltfuTracingProvider);
+    _ref.invalidate(patientHomeProvider);
+    _ref.invalidate(confirmationHistoryProvider);
+    _ref.invalidate(patientTreatmentPlansProvider);
+  }
 
   Future<void> checkAuth() async {
     final isLoggedIn = await _repo.isLoggedIn();
@@ -125,11 +146,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> logout() async {
     await _repo.logout();
     state = const AuthState();
+    _invalidateSessionProviders();
   }
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier(
+    ref,
     ref.read(authRepositoryProvider),
     ref.read(secureStorageProvider),
     ref.read(apiClientProvider),
