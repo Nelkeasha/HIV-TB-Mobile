@@ -20,7 +20,8 @@ class RegisterPatientScreen extends ConsumerStatefulWidget {
 
 class _RegisterPatientScreenState
     extends ConsumerState<RegisterPatientScreen> {
-  final _formKey    = GlobalKey<FormState>();
+  final List<GlobalKey<FormState>> _stepFormKeys =
+      List.generate(3, (_) => GlobalKey<FormState>());
   final _nameCtrl   = TextEditingController();
   final _phoneCtrl  = TextEditingController();
   final _villageCtrl = TextEditingController();
@@ -52,7 +53,6 @@ class _RegisterPatientScreenState
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
       final req = RegisterPatientRequest(
@@ -220,12 +220,10 @@ class _RegisterPatientScreenState
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
-      body: Form(
-        key: _formKey,
-        child: Stepper(
+      body: Stepper(
           currentStep: _currentStep,
           onStepContinue: () {
-            if (!_formKey.currentState!.validate()) return;
+            if (!_stepFormKeys[_currentStep].currentState!.validate()) return;
             if (_currentStep == 0 && _dob == null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -278,7 +276,9 @@ class _RegisterPatientScreenState
               title: Text(l('personal_info')),
               isActive: _currentStep >= 0,
               state: _currentStep > 0 ? StepState.complete : StepState.indexed,
-              content: Column(
+              content: Form(
+                key: _stepFormKeys[0],
+                child: Column(
                 children: [
                   TextFormField(
                     controller: _nameCtrl,
@@ -352,13 +352,16 @@ class _RegisterPatientScreenState
                     onChanged: (v) => setState(() => _hasSmartphone = v),
                   ),
                 ],
+                ),
               ),
             ),
             Step(
               title: Text(l('location')),
               isActive: _currentStep >= 1,
               state: _currentStep > 1 ? StepState.complete : StepState.indexed,
-              content: Column(
+              content: Form(
+                key: _stepFormKeys[1],
+                child: Column(
                 children: [
                   TextFormField(
                     controller: _villageCtrl,
@@ -389,12 +392,15 @@ class _RegisterPatientScreenState
                     ),
                   ),
                 ],
+                ),
               ),
             ),
             Step(
               title: Text(l('suspected_condition')),
               isActive: _currentStep >= 2,
-              content: Column(
+              content: Form(
+                key: _stepFormKeys[2],
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -441,11 +447,11 @@ class _RegisterPatientScreenState
                     ),
                   ),
                 ],
+                ),
               ),
             ),
           ],
         ),
-      ),
     );
   }
 }

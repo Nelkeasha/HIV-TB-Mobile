@@ -49,8 +49,9 @@ class PatientHomeState {
 }
 
 class PatientHomeNotifier extends StateNotifier<PatientHomeState> {
+  final Ref _ref;
   final PatientRepository _repo;
-  PatientHomeNotifier(this._repo) : super(const PatientHomeState());
+  PatientHomeNotifier(this._ref, this._repo) : super(const PatientHomeState());
 
   Future<void> load() async {
     state = state.copyWith(isLoading: true);
@@ -94,6 +95,7 @@ class PatientHomeNotifier extends StateNotifier<PatientHomeState> {
       state = queued
           ? state.copyWith(todaySchedule: updated, queuedMessage: 'queued')
           : state.copyWith(todaySchedule: updated, successMessage: 'Dose confirmed successfully!');
+      if (!queued) _ref.invalidate(confirmationHistoryProvider);
     } catch (_) {
       state = state.copyWith(error: 'Failed to confirm dose. Try again.');
     }
@@ -102,7 +104,7 @@ class PatientHomeNotifier extends StateNotifier<PatientHomeState> {
 
 final patientHomeProvider =
     StateNotifierProvider<PatientHomeNotifier, PatientHomeState>((ref) {
-  return PatientHomeNotifier(ref.read(patientRepositoryProvider));
+  return PatientHomeNotifier(ref, ref.read(patientRepositoryProvider));
 });
 
 final confirmationHistoryProvider =
