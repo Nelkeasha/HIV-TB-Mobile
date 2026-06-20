@@ -1,3 +1,5 @@
+import '../../../shared/models/patient_model.dart';
+
 // ─── LTFU Tracing Task ────────────────────────────────────────────────────────
 
 class TracingTaskModel {
@@ -82,6 +84,38 @@ class TracingTaskModel {
   bool get isResolved => status == 'RESOLVED';
 }
 
+// ─── Pending CHW Assignment (self-presented facility patients) ────────────────
+
+/// Masked view of a not-yet-accepted assignment — server deliberately omits
+/// the patient's name/diagnosis until acceptAssignment() is called.
+class PendingAssignmentModel {
+  final String patientId;
+  final String? village;
+  final String? sector;
+  final String protocol;
+  final DateTime assignedAt;
+
+  const PendingAssignmentModel({
+    required this.patientId,
+    this.village,
+    this.sector,
+    required this.protocol,
+    required this.assignedAt,
+  });
+
+  factory PendingAssignmentModel.fromJson(Map<String, dynamic> json) =>
+      PendingAssignmentModel(
+        patientId: json['patientId'] as String,
+        village: json['village'] as String?,
+        sector: json['sector'] as String?,
+        protocol: json['protocol'] as String? ?? '',
+        assignedAt: DateTime.parse(json['assignedAt'] as String),
+      );
+
+  Duration get pendingFor => DateTime.now().difference(assignedAt);
+  bool get isOverdue => pendingFor.inHours >= 24;
+}
+
 // ─── CHW Dashboard ────────────────────────────────────────────────────────────
 
 class CHWDashboard {
@@ -145,6 +179,20 @@ class PriorityListResponse {
       totalPatients: json['totalPatients'] as int? ?? 0,
     );
   }
+
+  /// Risk scores for every patient in this priority list, keyed by patientId —
+  /// used to merge risk data into PatientModel instances fetched from the
+  /// plain patient endpoints, which don't embed it.
+  Map<String, RiskScoreModel> get riskScoresByPatientId => {
+        for (final p in [...visitToday, ...callToday, ...stable])
+          p.patientId: RiskScoreModel(
+            patientId: p.patientId,
+            riskScore: p.riskScore,
+            riskLevel: p.riskLevel,
+            recommendedAction: p.recommendedAction,
+            priorityGroup: p.priorityGroup,
+          ),
+      };
 }
 
 class PriorityPatient {

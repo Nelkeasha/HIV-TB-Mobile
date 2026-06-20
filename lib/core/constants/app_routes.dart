@@ -5,6 +5,7 @@ abstract class AppRoutes {
   static const String forgotPassword = '/auth/forgot-password';
   static const String profile = '/profile';
   static const String notifications = '/notifications';
+  static const String syncFailures = '/sync-failures';
 
   // Patient
   static const String patientHome = '/patient/home';
@@ -21,6 +22,7 @@ abstract class AppRoutes {
   static const String chwRegister = '/chw/register';
   static const String chwAlerts = '/chw/alerts';
   static const String chwReports = '/chw/reports';
+  static const String chwPendingAssignments = '/chw/pending-assignments';
 
   // Admin
   static const String adminDashboard = '/admin/dashboard';

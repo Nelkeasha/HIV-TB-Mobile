@@ -12,6 +12,7 @@ import '../../../../shared/models/patient_model.dart';
 import '../../../../shared/widgets/adherence_ring.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../../shared/widgets/risk_badge.dart';
+import '../../../../shared/widgets/sync_failure_banner.dart';
 import '../providers/patient_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
@@ -73,6 +74,8 @@ class _PatientHomeScreenState extends ConsumerState<PatientHomeScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
+                    SyncFailureBanner(lang: lang),
+
                     // ── Adherence hero ────────────────────────────────────
                     _AdherenceHero(state: state, lang: lang),
 

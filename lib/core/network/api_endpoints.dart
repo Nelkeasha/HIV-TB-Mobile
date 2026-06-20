@@ -45,6 +45,9 @@ abstract class ApiEndpoints {
   static const String chwAlerts = '/api/alerts/chw';
   static String chwPatientReferrals(String patientId) => '/api/chw/referrals/patient/$patientId';
   static String chwAlertRead(String id) => '/api/alerts/$id/read';
+  // Village → CHW assignment acceptance (self-presented facility patients)
+  static const String pendingAssignments = '/api/chw/patients/pending-assignments';
+  static String acceptAssignment(String patientId) => '/api/chw/patients/$patientId/accept-assignment';
 
   // Clinical
   static const String clinicalStats = '/api/clinical/dashboard/stats';
@@ -97,6 +100,7 @@ abstract class ApiEndpoints {
 
   // Alerts (shared across roles)
   static String alertResolve(String id) => '/api/alerts/$id/resolve';
+  static const String reportSyncFailure = '/api/alerts/sync-failure';
 
   // FHIR
   static String fhirSync(String id) => '/api/fhir/sync/patient/$id';

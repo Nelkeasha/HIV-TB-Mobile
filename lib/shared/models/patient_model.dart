@@ -55,42 +55,92 @@ class PatientModel {
     this.screeningNotes,
   });
 
-  factory PatientModel.fromJson(Map<String, dynamic> json) => PatientModel(
-        id: json['id'] as String,
-        patientCode: json['patientCode'] as String,
-        fullName: json['fullName'] as String,
-        phoneNumber: json['phoneNumber'] as String?,
-        village: json['village'] as String?,
-        district: json['district'] as String?,
-        dateOfBirth: json['dateOfBirth'] != null
-            ? DateTime.tryParse(json['dateOfBirth'] as String)
-            : null,
-        gender: json['sex'] as String? ?? json['gender'] as String?,
-        isActive: json['isActive'] as bool? ?? true,
-        hivStatus: json['hivStatus'] as String?,
-        tbStatus: json['tbStatus'] as String?,
-        chwId: json['chwId'] != null ? json['chwId'].toString() : null,
-        chwName: json['chwName'] as String?,
-        latestRiskScore: json['latestRiskScore'] != null
-            ? RiskScoreModel.fromJson(
-                json['latestRiskScore'] as Map<String, dynamic>)
-            : null,
-        loginEmail: json['loginEmail'] as String?,
-        temporaryPassword: json['temporaryPassword'] as String?,
-        diagnosisType: json['diagnosisType'] as String?,
-        artStartDate: json['artStartDate'] != null
-            ? DateTime.tryParse(json['artStartDate'] as String)
-            : null,
-        tbTreatmentStartDate: json['tbTreatmentStartDate'] != null
-            ? DateTime.tryParse(json['tbTreatmentStartDate'] as String)
-            : null,
-        nextCHWVisitDate: json['nextCHWVisitDate'] != null
-            ? DateTime.tryParse(json['nextCHWVisitDate'] as String)
-            : null,
-        registrationStatus: json['registrationStatus'] as String? ?? 'CONFIRMED',
-        referralId: json['referralId'] as String?,
-        suspectedCondition: json['suspectedCondition'] as String?,
-        screeningNotes: json['screeningNotes'] as String?,
+  factory PatientModel.fromJson(Map<String, dynamic> json) {
+    final diagnosisType = json['diagnosisType'] as String?;
+    return PatientModel(
+      id: json['id'] as String,
+      patientCode: json['patientCode'] as String,
+      fullName: json['fullName'] as String,
+      phoneNumber: json['phoneNumber'] as String?,
+      village: json['village'] as String?,
+      district: json['district'] as String?,
+      dateOfBirth: json['dateOfBirth'] != null
+          ? DateTime.tryParse(json['dateOfBirth'] as String)
+          : null,
+      gender: json['sex'] as String? ?? json['gender'] as String?,
+      isActive: json['isActive'] as bool? ?? true,
+      // The backend's PatientResponse has no hivStatus/tbStatus fields — every
+      // patient in this system is already diagnosed, so derive status from
+      // diagnosisType (HIV | TB | HIV_TB_COINFECTION) instead.
+      hivStatus: json['hivStatus'] as String? ?? _deriveHivStatus(diagnosisType),
+      tbStatus: json['tbStatus'] as String? ?? _deriveTbStatus(diagnosisType),
+      chwId: json['chwId'] != null ? json['chwId'].toString() : null,
+      chwName: json['chwName'] as String?,
+      latestRiskScore: json['latestRiskScore'] != null
+          ? RiskScoreModel.fromJson(
+              json['latestRiskScore'] as Map<String, dynamic>)
+          : null,
+      loginEmail: json['loginEmail'] as String?,
+      temporaryPassword: json['temporaryPassword'] as String?,
+      diagnosisType: diagnosisType,
+      artStartDate: json['artStartDate'] != null
+          ? DateTime.tryParse(json['artStartDate'] as String)
+          : null,
+      tbTreatmentStartDate: json['tbTreatmentStartDate'] != null
+          ? DateTime.tryParse(json['tbTreatmentStartDate'] as String)
+          : null,
+      nextCHWVisitDate: json['nextCHWVisitDate'] != null
+          ? DateTime.tryParse(json['nextCHWVisitDate'] as String)
+          : null,
+      registrationStatus: json['registrationStatus'] as String? ?? 'CONFIRMED',
+      referralId: json['referralId'] as String?,
+      suspectedCondition: json['suspectedCondition'] as String?,
+      screeningNotes: json['screeningNotes'] as String?,
+    );
+  }
+
+  static String? _deriveHivStatus(String? diagnosisType) {
+    if (diagnosisType == null) return null;
+    return (diagnosisType == 'HIV' || diagnosisType == 'HIV_TB_COINFECTION')
+        ? 'POSITIVE'
+        : 'NEGATIVE';
+  }
+
+  static String? _deriveTbStatus(String? diagnosisType) {
+    if (diagnosisType == null) return null;
+    return (diagnosisType == 'TB' || diagnosisType == 'HIV_TB_COINFECTION')
+        ? 'ACTIVE'
+        : 'NO_TB';
+  }
+
+  /// Returns a copy with [riskScore] attached — used to merge in risk data
+  /// fetched separately from the priority-list endpoint, since the plain
+  /// patient endpoints don't embed it.
+  PatientModel withRiskScore(RiskScoreModel? riskScore) => PatientModel(
+        id: id,
+        patientCode: patientCode,
+        fullName: fullName,
+        phoneNumber: phoneNumber,
+        village: village,
+        district: district,
+        dateOfBirth: dateOfBirth,
+        gender: gender,
+        isActive: isActive,
+        hivStatus: hivStatus,
+        tbStatus: tbStatus,
+        chwId: chwId,
+        chwName: chwName,
+        latestRiskScore: riskScore,
+        loginEmail: loginEmail,
+        temporaryPassword: temporaryPassword,
+        diagnosisType: diagnosisType,
+        artStartDate: artStartDate,
+        tbTreatmentStartDate: tbTreatmentStartDate,
+        nextCHWVisitDate: nextCHWVisitDate,
+        registrationStatus: registrationStatus,
+        referralId: referralId,
+        suspectedCondition: suspectedCondition,
+        screeningNotes: screeningNotes,
       );
 
   bool get isProvisional => registrationStatus == 'PROVISIONAL';

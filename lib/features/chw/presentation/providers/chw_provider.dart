@@ -58,7 +58,16 @@ class CHWPatientsNotifier extends StateNotifier<CHWPatientsState> {
     state = state.copyWith(isLoading: true);
     try {
       final patients = await _repo.getPatients();
-      state = state.copyWith(isLoading: false, patients: patients);
+      Map<String, RiskScoreModel> riskByPatientId = {};
+      try {
+        riskByPatientId = (await _repo.getPriorityList()).riskScoresByPatientId;
+      } catch (_) {
+        // Risk scores are supplementary; the patient list still loads without them.
+      }
+      final merged = patients
+          .map((p) => p.withRiskScore(riskByPatientId[p.id]))
+          .toList();
+      state = state.copyWith(isLoading: false, patients: merged);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
@@ -79,8 +88,16 @@ final priorityListProvider = FutureProvider<PriorityListResponse>((ref) {
 
 // Single patient
 final patientDetailProvider =
-    FutureProvider.family<PatientModel, String>((ref, id) {
-  return ref.read(chwRepositoryProvider).getPatientDetail(id);
+    FutureProvider.family<PatientModel, String>((ref, id) async {
+  final repo = ref.read(chwRepositoryProvider);
+  final patient = await repo.getPatientDetail(id);
+  try {
+    final riskByPatientId = (await repo.getPriorityList()).riskScoresByPatientId;
+    return patient.withRiskScore(riskByPatientId[id]);
+  } catch (_) {
+    // Risk score is supplementary; patient detail still loads without it.
+    return patient;
+  }
 });
 
 // Visit history
@@ -111,5 +128,18 @@ final patientActiveSchedulesProvider =
     FutureProvider.autoDispose.family<List<DoseScheduleModel>, String>(
         (ref, patientId) {
   return ref.read(chwRepositoryProvider).getActiveSchedules(patientId);
+});
+
+// Pending CHW assignments (self-presented facility patients awaiting acceptance)
+final pendingAssignmentsProvider =
+    FutureProvider.autoDispose<List<PendingAssignmentModel>>((ref) {
+  return ref.read(chwRepositoryProvider).getPendingAssignments();
+});
+
+final pendingAssignmentCountProvider = Provider.autoDispose<int>((ref) {
+  return ref.watch(pendingAssignmentsProvider).maybeWhen(
+        data: (list) => list.length,
+        orElse: () => 0,
+      );
 });
 

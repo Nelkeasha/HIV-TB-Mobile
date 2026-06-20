@@ -9,7 +9,9 @@ import '../../../../core/utils/date_utils.dart';
 import '../../../../shared/models/patient_model.dart';
 import '../../../../shared/widgets/accent_card.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
+import '../../../../shared/widgets/pending_assignment_banner.dart';
 import '../../../../shared/widgets/risk_badge.dart';
+import '../../../../shared/widgets/sync_failure_banner.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/chw_models.dart';
 import '../providers/chw_provider.dart';
@@ -247,6 +249,9 @@ class _HomeTab extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
         children: [
+          PendingAssignmentBanner(lang: lang),
+          SyncFailureBanner(lang: lang),
+
           // Date chip
           Row(
             children: [

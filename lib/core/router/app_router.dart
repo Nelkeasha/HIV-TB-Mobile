@@ -7,6 +7,7 @@ import '../../features/auth/presentation/screens/change_password_screen.dart';
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/shared/presentation/screens/profile_screen.dart';
 import '../../features/shared/presentation/screens/notifications_screen.dart';
+import '../../features/shared/presentation/screens/failed_actions_screen.dart';
 import '../../features/patient/presentation/screens/patient_home_screen.dart';
 import '../../features/patient/presentation/screens/patient_confirm_screen.dart';
 import '../../features/patient/presentation/screens/dose_history_screen.dart';
@@ -19,6 +20,7 @@ import '../../features/chw/presentation/screens/home_visit_screen.dart';
 import '../../features/chw/presentation/screens/register_patient_screen.dart';
 import '../../features/chw/presentation/screens/chw_alerts_screen.dart';
 import '../../features/chw/presentation/screens/chw_report_screen.dart';
+import '../../features/chw/presentation/screens/pending_assignments_screen.dart';
 import '../../features/admin/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/admin/presentation/screens/admin_report_screen.dart';
 import '../../features/admin/presentation/screens/admin_users_screen.dart';
@@ -54,6 +56,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.notifications,
       builder: (_, __) => const NotificationsScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.syncFailures,
+      builder: (_, __) => const FailedActionsScreen(),
     ),
 
     // Patient routes
@@ -110,6 +116,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.chwReports,
       builder: (_, __) => const ChwReportScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.chwPendingAssignments,
+      builder: (_, __) => const PendingAssignmentsScreen(),
     ),
 
     // Admin routes

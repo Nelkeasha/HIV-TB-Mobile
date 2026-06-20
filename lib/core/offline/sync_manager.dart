@@ -3,6 +3,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../network/api_client.dart';
+import '../network/api_endpoints.dart';
+import 'failed_action_db.dart';
 import 'pending_action_db.dart';
 
 /// True only for failures that mean "couldn't reach the server" — never for
@@ -21,9 +23,38 @@ bool isConnectivityFailure(Object error) {
   }
 }
 
+/// True for a definite, non-retryable rejection — the server responded with
+/// a 4xx that resending the same payload will never turn into a success
+/// (e.g. a duplicate confirmation, or a window that's already closed).
+bool _isTerminalRejection(Object error) {
+  if (error is! DioException) return false;
+  final status = error.response?.statusCode;
+  return status != null && status >= 400 && status < 500;
+}
+
+String _reasonFor(Object error) {
+  if (error is DioException) {
+    final status = error.response?.statusCode;
+    final data = error.response?.data;
+    final serverMessage = data is Map ? data['message'] as String? : null;
+    return serverMessage ?? 'Server rejected this action (HTTP $status).';
+  }
+  return 'Server rejected this action.';
+}
+
 /// Number of actions currently queued offline. UI reads this for a "queued"
 /// badge; the logout flow reads it to warn before discarding unsynced work.
 final pendingActionCountProvider = StateProvider<int>((ref) => 0);
+
+/// Number of offline actions the server permanently rejected — see
+/// [FailedActionDb]. UI reads this to show a "Needs Attention" banner.
+final failedActionCountProvider = StateProvider<int>((ref) => 0);
+
+/// The actual list, for the "Needs Attention" screen. Invalidate after a
+/// dismiss to refresh.
+final failedActionsProvider = FutureProvider.autoDispose<List<FailedAction>>((ref) {
+  return FailedActionDb.getAll();
+});
 
 final syncManagerProvider = Provider<SyncManager>((ref) {
   final manager = SyncManager(ref);
@@ -61,8 +92,10 @@ class SyncManager {
   }
 
   Future<void> _refreshCount() async {
-    final count = await PendingActionDb.count();
-    _ref.read(pendingActionCountProvider.notifier).state = count;
+    final pending = await PendingActionDb.count();
+    final failed = await FailedActionDb.count();
+    _ref.read(pendingActionCountProvider.notifier).state = pending;
+    _ref.read(failedActionCountProvider.notifier).state = failed;
   }
 
   Future<void> flush() async {
@@ -80,12 +113,50 @@ class SyncManager {
           if (isConnectivityFailure(e)) {
             break; // still offline — stop here, the rest stay queued for next cycle
           }
-          await PendingActionDb.recordFailureAndMaybeDrop(action.id!, action.retryCount);
+          if (_isTerminalRejection(e)) {
+            await _moveToFailed(action, _reasonFor(e));
+          } else {
+            final dropped = await PendingActionDb.recordFailureAndMaybeDrop(
+                action.id!, action.retryCount);
+            if (dropped) {
+              await _moveToFailed(action,
+                  'The server kept rejecting this and the retry limit was reached.');
+            }
+          }
         }
       }
     } finally {
       await _refreshCount();
       _flushing = false;
+    }
+  }
+
+  /// Records a terminally-rejected action locally so it's visible as "Needs
+  /// Attention" instead of silently lost, then makes a best-effort report to
+  /// the backend so supervisors/facility providers see it too.
+  Future<void> _moveToFailed(PendingAction action, String reason) async {
+    await FailedActionDb.add(FailedAction(
+      type: action.type,
+      payload: action.payload,
+      reason: reason,
+      failedAt: DateTime.now(),
+    ));
+    await _reportToBackend(action, reason);
+  }
+
+  Future<void> _reportToBackend(PendingAction action, String reason) async {
+    try {
+      final client = _ref.read(apiClientProvider);
+      final patientId = action.payload['patientId'] as String?;
+      await client.post(ApiEndpoints.reportSyncFailure, data: {
+        'actionType': action.type.key,
+        if (patientId != null) 'patientId': patientId,
+        'reason': reason,
+      });
+    } catch (_) {
+      // Best-effort only — the local FailedActionDb entry (and the CHW/patient
+      // seeing it in-app) is the source of truth; supervisor visibility on the
+      // web dashboard is supplementary and can be missing without data loss.
     }
   }
 }

@@ -170,4 +170,18 @@ class CHWRepository {
         .map((e) => TracingTaskModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  // ── Village → CHW assignment acceptance ──────────────────────────────────
+
+  Future<List<PendingAssignmentModel>> getPendingAssignments() async {
+    final r = await _client.get(ApiEndpoints.pendingAssignments);
+    return (r.data as List)
+        .map((e) => PendingAssignmentModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<PatientModel> acceptAssignment(String patientId) async {
+    final r = await _client.post(ApiEndpoints.acceptAssignment(patientId), data: {});
+    return PatientModel.fromJson(r.data as Map<String, dynamic>);
+  }
 }
