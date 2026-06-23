@@ -293,7 +293,7 @@ class _RegisterPatientScreenState
                   TextFormField(
                     controller: _phoneCtrl,
                     keyboardType: TextInputType.phone,
-                    validator: Validators.phone,
+                    validator: Validators.requiredPhone,
                     decoration: InputDecoration(
                       labelText: '${l('phone_number')} *',
                       prefixIcon: const Icon(Icons.phone_outlined, size: 20),

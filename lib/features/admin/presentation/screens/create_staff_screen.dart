@@ -278,7 +278,7 @@ class _CreateStaffScreenState extends ConsumerState<CreateStaffScreen> {
                       label: 'Phone Number',
                       icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
-                      validator: Validators.phone,
+                      validator: Validators.requiredPhone,
                       action: TextInputAction.next,
                     ),
 
@@ -304,7 +304,7 @@ class _CreateStaffScreenState extends ConsumerState<CreateStaffScreen> {
                         controller: _codeCtrl,
                         label: 'Employee Code',
                         icon: Icons.badge_outlined,
-                        validator: Validators.required,
+                        validator: Validators.employeeCode,
                         action: TextInputAction.next,
                       ),
                       const SizedBox(height: 12),
