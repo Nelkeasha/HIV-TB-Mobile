@@ -35,6 +35,8 @@ abstract class ApiEndpoints {
   static String chwPatientDetail(String id) => '/api/chw/patients/$id';
   static const String chwRecordVisit = '/api/chw/visits';
   static String chwVisitHistory(String patientId) => '/api/chw/visits/patient/$patientId';
+  static String chwUpdateVisit(String visitId) => '/api/chw/visits/$visitId';
+  static String chwGetVisit(String visitId) => '/api/chw/visits/$visitId';
   // LTFU Tracing
   static const String chwTracingMyTasks = '/api/tracing/chw/my-tasks';
   static String tracingUpdateStatus(String id) => '/api/tracing/$id/status';
@@ -102,6 +104,11 @@ abstract class ApiEndpoints {
   static String alertResolve(String id) => '/api/alerts/$id/resolve';
   static const String reportSyncFailure = '/api/alerts/sync-failure';
 
-  // FHIR
-  static String fhirSync(String id) => '/api/fhir/sync/patient/$id';
+  // FHIR sync — CHW-scoped batch sessions, not per-patient. FhirSyncController
+  // has no per-patient route; use these instead of inventing a "sync one
+  // patient" call.
+  static const String chwSyncPending = '/api/chw/sync/pending';
+  static const String chwSyncTrigger = '/api/chw/sync/trigger';
+  static const String chwSyncHistory = '/api/chw/sync/history';
+  static String chwSyncHistoryDetail(String logId) => '/api/chw/sync/history/$logId';
 }

@@ -13,6 +13,7 @@ import '../../../../shared/widgets/adherence_ring.dart';
 import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../../shared/widgets/risk_badge.dart';
 import '../../../../shared/widgets/sync_failure_banner.dart';
+import '../../../../shared/widgets/last_synced_banner.dart';
 import '../providers/patient_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
@@ -75,6 +76,7 @@ class _PatientHomeScreenState extends ConsumerState<PatientHomeScreen> {
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     SyncFailureBanner(lang: lang),
+                    LastSyncedBanner(lang: lang),
 
                     // ── Adherence hero ────────────────────────────────────
                     _AdherenceHero(state: state, lang: lang),

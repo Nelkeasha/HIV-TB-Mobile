@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_endpoints.dart';
 import '../../../../shared/widgets/accent_card.dart';
 
 class SyncLogEntry {
@@ -42,7 +43,7 @@ class SyncLogEntry {
 final _syncHistoryProvider = FutureProvider.autoDispose<List<SyncLogEntry>>((ref) async {
   final client = ref.read(apiClientProvider);
   try {
-    final r = await client.get('/api/chw/sync/history');
+    final r = await client.get(ApiEndpoints.chwSyncHistory);
     return (r.data as List).map((e) => SyncLogEntry.fromJson(e as Map<String, dynamic>)).toList();
   } catch (_) {
     return [];
@@ -52,7 +53,7 @@ final _syncHistoryProvider = FutureProvider.autoDispose<List<SyncLogEntry>>((ref
 final _syncPendingProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   final client = ref.read(apiClientProvider);
   try {
-    final r = await client.get('/api/chw/sync/pending');
+    final r = await client.get(ApiEndpoints.chwSyncPending);
     return r.data as Map<String, dynamic>;
   } catch (_) {
     return {};
@@ -162,7 +163,7 @@ class SyncMonitorScreen extends ConsumerWidget {
   void _triggerSync(BuildContext context, WidgetRef ref) async {
     final client = ref.read(apiClientProvider);
     try {
-      await client.post('/api/chw/sync/trigger');
+      await client.post(ApiEndpoints.chwSyncTrigger);
       ref.invalidate(_syncHistoryProvider);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

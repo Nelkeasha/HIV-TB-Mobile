@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_routes.dart';
 import '../../../../core/l10n/app_l10n.dart';
 import '../../../../core/l10n/l10n_provider.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../shared/models/alert_model.dart';
 import '../../../../shared/models/patient_model.dart';
@@ -14,6 +16,7 @@ import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../../shared/widgets/risk_badge.dart';
 import '../providers/chw_provider.dart';
 import '../../data/chw_repository.dart';
+import '../../domain/chw_models.dart';
 import '../../../../shared/models/alert_model.dart' show DoseScheduleModel;
 
 class PatientDetailScreen extends ConsumerWidget {
@@ -522,14 +525,23 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _VisitTile extends StatelessWidget {
+class _VisitTile extends ConsumerWidget {
   final HomeVisitModel visit;
   final String lang;
 
   const _VisitTile({required this.visit, required this.lang});
 
+  Future<void> _openEditSheet(BuildContext context, WidgetRef ref) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _EditVisitSheet(visit: visit, lang: lang),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final v = visit;
     final l = (String k) => AppL10n.t(k, lang);
     final adherenceColor = _adherenceColor(v.adherenceStatus);
@@ -552,6 +564,16 @@ class _VisitTile extends StatelessWidget {
                       fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
+              InkWell(
+                onTap: () => _openEditSheet(context, ref),
+                borderRadius: BorderRadius.circular(8),
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.edit_outlined,
+                      size: 16, color: AppColors.textSecondary),
+                ),
+              ),
+              const SizedBox(width: 4),
               Container(
                 margin: const EdgeInsets.only(right: 6),
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -580,6 +602,24 @@ class _VisitTile extends StatelessWidget {
                   ),
                   child: Text(
                     l('pill_discrepancy_label'),
+                    style: const TextStyle(
+                        fontSize: 10,
+                        color: AppColors.riskCritical,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+              if (v.adverseEventGrade != null && v.adverseEventGrade! >= 3) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.riskCriticalBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${l('grade_label')} ${v.adverseEventGrade}',
                     style: const TextStyle(
                         fontSize: 10,
                         color: AppColors.riskCritical,
@@ -649,6 +689,523 @@ class _VisitTile extends StatelessWidget {
       default:
         return AppColors.textHint;
     }
+  }
+}
+
+class _EditVisitSheet extends ConsumerStatefulWidget {
+  final HomeVisitModel visit;
+  final String lang;
+  const _EditVisitSheet({required this.visit, required this.lang});
+
+  @override
+  ConsumerState<_EditVisitSheet> createState() => _EditVisitSheetState();
+}
+
+class _EditVisitSheetState extends ConsumerState<_EditVisitSheet> {
+  late String _adherenceStatus;
+  late final TextEditingController _symptomsCtrl;
+  late final TextEditingController _sideEffectsCtrl;
+  late final TextEditingController _notesCtrl;
+  int? _adverseEventGrade;
+  bool _saving = false;
+
+  /// Non-null while showing the side-by-side conflict view — the current
+  /// server-side state, fetched after a 409 told us our recordVersion is stale.
+  HomeVisitModel? _conflictServer;
+  /// Per-field choice in the conflict view: true = keep my (local) edit,
+  /// false = keep the current server value. Keyed by field name. Defaults to
+  /// "keep mine" for every differing field until the CHW changes it.
+  final Map<String, bool> _keepMine = {};
+
+  static const _adherenceOptions = ['GOOD', 'PARTIAL', 'POOR', 'MISSED'];
+
+  @override
+  void initState() {
+    super.initState();
+    final v = widget.visit;
+    _adherenceStatus = v.adherenceStatus;
+    _symptomsCtrl = TextEditingController(text: v.symptomsReported ?? '');
+    _sideEffectsCtrl = TextEditingController(text: v.sideEffectsReported ?? '');
+    _notesCtrl = TextEditingController(text: v.psychosocialNotes ?? '');
+    _adverseEventGrade = v.adverseEventGrade;
+  }
+
+  @override
+  void dispose() {
+    _symptomsCtrl.dispose();
+    _sideEffectsCtrl.dispose();
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  UpdateHomeVisitRequest _buildRequest(int recordVersion) => UpdateHomeVisitRequest(
+        recordVersion: recordVersion,
+        adherenceStatus: _adherenceStatus,
+        pillCountRecorded: widget.visit.pillCountRecorded,
+        pillCountExpected: widget.visit.pillCountExpected,
+        symptomsReported: _symptomsCtrl.text.trim().isEmpty ? null : _symptomsCtrl.text.trim(),
+        sideEffectsReported:
+            _sideEffectsCtrl.text.trim().isEmpty ? null : _sideEffectsCtrl.text.trim(),
+        psychosocialNotes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        nextVisitDate: widget.visit.nextVisitDate,
+        adverseEventGrade: _adverseEventGrade,
+      );
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final req = _buildRequest(widget.visit.recordVersion);
+    try {
+      await ref.read(chwRepositoryProvider).updateVisit(widget.visit.id, req);
+      ref.invalidate(visitHistoryProvider(widget.visit.patientId));
+      ref.invalidate(patientDetailProvider(widget.visit.patientId));
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppL10n.t('visit_updated', widget.lang)),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      // A 409 means another device/session changed this visit first. Fetch
+      // the current server-side state and switch this sheet into conflict
+      // view rather than just bouncing the CHW back to redo the whole edit.
+      if (e is DioException && e.response?.statusCode == 409) {
+        await _loadConflict();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.friendlyError(e)),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _loadConflict() async {
+    try {
+      final current = await ref.read(chwRepositoryProvider).getVisitById(widget.visit.id);
+      if (!mounted) return;
+      setState(() {
+        _conflictServer = current;
+        _keepMine.clear();
+        for (final field in _conflictFields(current)) {
+          _keepMine[field] = true;
+        }
+      });
+    } catch (e) {
+      ref.invalidate(visitHistoryProvider(widget.visit.patientId));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.friendlyError(e)),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Field names where the CHW's in-progress edit differs from the current
+  /// server value — these are the only rows the conflict view needs to show.
+  List<String> _conflictFields(HomeVisitModel server) {
+    final fields = <String>[];
+    if (_adherenceStatus != server.adherenceStatus) fields.add('adherenceStatus');
+    final mySymptoms = _symptomsCtrl.text.trim().isEmpty ? null : _symptomsCtrl.text.trim();
+    if (mySymptoms != server.symptomsReported) fields.add('symptomsReported');
+    final mySideEffects = _sideEffectsCtrl.text.trim().isEmpty ? null : _sideEffectsCtrl.text.trim();
+    if (mySideEffects != server.sideEffectsReported) fields.add('sideEffectsReported');
+    final myNotes = _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim();
+    if (myNotes != server.psychosocialNotes) fields.add('psychosocialNotes');
+    if (_adverseEventGrade != server.adverseEventGrade) fields.add('adverseEventGrade');
+    return fields;
+  }
+
+  Future<void> _resolveAndSave() async {
+    final server = _conflictServer!;
+    setState(() => _saving = true);
+
+    // Start from the CHW's in-progress edits, then overwrite with the
+    // server's current value for any field the CHW chose to keep theirs.
+    String adherence = _adherenceStatus;
+    String? symptoms = _symptomsCtrl.text.trim().isEmpty ? null : _symptomsCtrl.text.trim();
+    String? sideEffects = _sideEffectsCtrl.text.trim().isEmpty ? null : _sideEffectsCtrl.text.trim();
+    String? notes = _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim();
+    int? grade = _adverseEventGrade;
+
+    if (_keepMine['adherenceStatus'] == false) adherence = server.adherenceStatus;
+    if (_keepMine['symptomsReported'] == false) symptoms = server.symptomsReported;
+    if (_keepMine['sideEffectsReported'] == false) sideEffects = server.sideEffectsReported;
+    if (_keepMine['psychosocialNotes'] == false) notes = server.psychosocialNotes;
+    if (_keepMine['adverseEventGrade'] == false) grade = server.adverseEventGrade;
+
+    final req = UpdateHomeVisitRequest(
+      recordVersion: server.recordVersion,
+      adherenceStatus: adherence,
+      pillCountRecorded: widget.visit.pillCountRecorded,
+      pillCountExpected: widget.visit.pillCountExpected,
+      symptomsReported: symptoms,
+      sideEffectsReported: sideEffects,
+      psychosocialNotes: notes,
+      nextVisitDate: widget.visit.nextVisitDate,
+      adverseEventGrade: grade,
+    );
+
+    try {
+      await ref.read(chwRepositoryProvider).updateVisit(widget.visit.id, req);
+      ref.invalidate(visitHistoryProvider(widget.visit.patientId));
+      ref.invalidate(patientDetailProvider(widget.visit.patientId));
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppL10n.t('visit_updated', widget.lang)),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      // Someone changed it again between the conflict fetch and this resolve
+      // — re-fetch and let the CHW resolve once more rather than fail silently.
+      if (e is DioException && e.response?.statusCode == 409) {
+        await _loadConflict();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.friendlyError(e)),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = (String k) => AppL10n.t(k, widget.lang);
+    if (_conflictServer != null) {
+      return _buildConflictView(context, l);
+    }
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(l('edit_visit'),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                children: _adherenceOptions.map((status) {
+                  final selected = _adherenceStatus == status;
+                  return ChoiceChip(
+                    label: Text(status),
+                    selected: selected,
+                    onSelected: (_) => setState(() => _adherenceStatus = status),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _symptomsCtrl,
+                maxLines: 2,
+                decoration: InputDecoration(labelText: l('symptoms')),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _sideEffectsCtrl,
+                maxLines: 2,
+                decoration: InputDecoration(labelText: l('describe_side_effects')),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _notesCtrl,
+                maxLines: 2,
+                decoration: InputDecoration(labelText: l('notes_optional')),
+              ),
+              const SizedBox(height: 12),
+              Text(l('adverse_event_grade'),
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [1, 2, 3, 4].map((grade) {
+                  final selected = _adverseEventGrade == grade;
+                  return ChoiceChip(
+                    label: Text('${l('grade_label')} $grade'),
+                    selected: selected,
+                    onSelected: (v) =>
+                        setState(() => _adverseEventGrade = v ? grade : null),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        )
+                      : Text(l('save')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _adherenceLabel(String s, String Function(String) l) {
+    switch (s) {
+      case 'GOOD':    return l('adherence_good');
+      case 'PARTIAL': return l('adherence_partial');
+      case 'POOR':    return l('adherence_poor');
+      case 'MISSED':  return l('adherence_missed');
+      default:        return s;
+    }
+  }
+
+  Widget _buildConflictView(BuildContext context, String Function(String) l) {
+    final server = _conflictServer!;
+    final fields = _conflictFields(server);
+
+    String mineValue(String field) {
+      switch (field) {
+        case 'adherenceStatus':    return _adherenceLabel(_adherenceStatus, l);
+        case 'symptomsReported':   return _symptomsCtrl.text.trim().isEmpty ? l('none') : _symptomsCtrl.text.trim();
+        case 'sideEffectsReported': return _sideEffectsCtrl.text.trim().isEmpty ? l('none') : _sideEffectsCtrl.text.trim();
+        case 'psychosocialNotes':  return _notesCtrl.text.trim().isEmpty ? l('none') : _notesCtrl.text.trim();
+        case 'adverseEventGrade':  return _adverseEventGrade == null ? l('none') : '${l('grade_label')} $_adverseEventGrade';
+        default: return '';
+      }
+    }
+
+    String theirValue(String field) {
+      switch (field) {
+        case 'adherenceStatus':    return _adherenceLabel(server.adherenceStatus, l);
+        case 'symptomsReported':   return server.symptomsReported?.isNotEmpty == true ? server.symptomsReported! : l('none');
+        case 'sideEffectsReported': return server.sideEffectsReported?.isNotEmpty == true ? server.sideEffectsReported! : l('none');
+        case 'psychosocialNotes':  return server.psychosocialNotes?.isNotEmpty == true ? server.psychosocialNotes! : l('none');
+        case 'adverseEventGrade':  return server.adverseEventGrade == null ? l('none') : '${l('grade_label')} ${server.adverseEventGrade}';
+        default: return '';
+      }
+    }
+
+    String fieldLabel(String field) {
+      switch (field) {
+        case 'adherenceStatus':     return l('adherence_status');
+        case 'symptomsReported':    return l('symptoms');
+        case 'sideEffectsReported': return l('describe_side_effects');
+        case 'psychosocialNotes':   return l('notes_optional');
+        case 'adverseEventGrade':   return l('adverse_event_grade');
+        default: return field;
+      }
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.divider,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.sync_problem_rounded, color: AppColors.riskHigh, size: 22),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(l('conflict_title'),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l('conflict_subtitle'),
+                style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary, height: 1.4),
+              ),
+              const SizedBox(height: 18),
+              if (fields.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(l('conflict_no_field_changes'),
+                      style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
+                )
+              else
+                ...fields.map((field) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(fieldLabel(field),
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 6),
+                          _ConflictChoiceRow(
+                            mineLabel: l('conflict_mine'),
+                            mineValue: mineValue(field),
+                            theirsLabel: l('conflict_current'),
+                            theirsValue: theirValue(field),
+                            keepMine: _keepMine[field] ?? true,
+                            onChanged: (v) => setState(() => _keepMine[field] = v),
+                          ),
+                        ],
+                      ),
+                    )),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _resolveAndSave,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        )
+                      : Text(l('conflict_resolve_save')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ConflictChoiceRow extends StatelessWidget {
+  final String mineLabel;
+  final String mineValue;
+  final String theirsLabel;
+  final String theirsValue;
+  final bool keepMine;
+  final ValueChanged<bool> onChanged;
+
+  const _ConflictChoiceRow({
+    required this.mineLabel,
+    required this.mineValue,
+    required this.theirsLabel,
+    required this.theirsValue,
+    required this.keepMine,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: _option(mineLabel, mineValue, keepMine, () => onChanged(true))),
+        const SizedBox(width: 8),
+        Expanded(child: _option(theirsLabel, theirsValue, !keepMine, () => onChanged(false))),
+      ],
+    );
+  }
+
+  Widget _option(String label, String value, bool selected, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary.withValues(alpha: 0.08) : AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: selected ? AppColors.primary : AppColors.divider, width: selected ? 1.5 : 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                  size: 15,
+                  color: selected ? AppColors.primary : AppColors.textHint,
+                ),
+                const SizedBox(width: 5),
+                Text(label,
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: selected ? AppColors.primary : AppColors.textHint,
+                    )),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(value,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+          ],
+        ),
+      ),
+    );
   }
 }
 

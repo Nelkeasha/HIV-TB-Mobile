@@ -32,6 +32,8 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
   // State
   String _adherenceStatus = 'GOOD';
   bool _hasSideEffects = false;
+  int? _adverseEventGrade;
+  bool _referralInitiated = false;
   bool _pillCountEnabled = false;
   DateTime? _nextVisitDate;
   bool _isLoading = false;
@@ -108,6 +110,10 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
             ? null
             : _notesCtrl.text.trim(),
         nextVisitDate: _nextVisitDate,
+        adverseEventGrade: _hasSideEffects ? _adverseEventGrade : null,
+        referralInitiated: (_hasSideEffects && _adverseEventGrade != null && _adverseEventGrade! >= 3)
+            ? _referralInitiated
+            : null,
       );
       final queued = await ref.read(chwRepositoryProvider).recordVisit(req);
       ref.invalidate(visitHistoryProvider(widget.patientId));
@@ -290,7 +296,11 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
                 value: _hasSideEffects,
                 onChanged: (v) => setState(() {
                   _hasSideEffects = v;
-                  if (!v) _sideEffectsCtrl.clear();
+                  if (!v) {
+                    _sideEffectsCtrl.clear();
+                    _adverseEventGrade = null;
+                    _referralInitiated = false;
+                  }
                 }),
                 activeColor: AppColors.riskHigh,
               ),
@@ -309,6 +319,75 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
                     prefixIcon: const Icon(Icons.warning_amber_rounded, size: 18),
                   ),
                 ),
+                const SizedBox(height: 12),
+                Text(l('adverse_event_grade'),
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(l('adverse_event_grade_hint'),
+                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [1, 2, 3, 4].map((grade) {
+                    final selected = _adverseEventGrade == grade;
+                    final severe = grade >= 3;
+                    final color = severe ? AppColors.riskCritical : AppColors.riskModerate;
+                    return ChoiceChip(
+                      label: Text('${l('grade_label')} $grade'),
+                      selected: selected,
+                      onSelected: (v) => setState(() {
+                        _adverseEventGrade = v ? grade : null;
+                        if (_adverseEventGrade == null || _adverseEventGrade! < 3) {
+                          _referralInitiated = false;
+                        }
+                      }),
+                      selectedColor: color.withValues(alpha: 0.18),
+                      labelStyle: TextStyle(
+                        color: selected ? color : AppColors.textPrimary,
+                        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                        fontSize: 12,
+                      ),
+                      side: BorderSide(color: selected ? color : AppColors.divider),
+                    );
+                  }).toList(),
+                ),
+                if (_adverseEventGrade != null && _adverseEventGrade! >= 3) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.campaign_rounded,
+                            size: 16, color: AppColors.riskCritical),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            l('grade_severe_alert_notice'),
+                            style: const TextStyle(
+                                fontSize: 11.5,
+                                color: AppColors.riskCritical,
+                                fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _ToggleCard(
+                    title: l('referral_initiated'),
+                    subtitle: l('referral_initiated_sub'),
+                    value: _referralInitiated,
+                    onChanged: (v) => setState(() => _referralInitiated = v),
+                    activeColor: AppColors.riskCritical,
+                  ),
+                  if (!_referralInitiated)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6, left: 4),
+                      child: Text(
+                        l('referral_initiated_warning'),
+                        style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+                      ),
+                    ),
+                ],
               ],
               const SizedBox(height: 24),
 

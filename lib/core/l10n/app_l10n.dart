@@ -222,6 +222,10 @@ abstract class AppL10n {
     'patient_code':      {'en': 'Patient Code',        'fr': 'Code Patient',        'rw': 'Kode y\'Umurwayi'},
     'village':           {'en': 'Village',             'fr': 'Village',             'rw': 'Umudugudu'},
     'district':          {'en': 'District',            'fr': 'District',            'rw': 'Akarere'},
+    'capture_location':       {'en': 'Capture GPS Location',  'fr': 'Capturer la position GPS',  'rw': 'Fata Aderesi ya GPS'},
+    'location_captured':      {'en': 'Location captured',     'fr': 'Position capturée',          'rw': 'Aderesi yafashwe'},
+    'location_not_captured':  {'en': 'Location not captured (optional)', 'fr': 'Position non capturée (facultatif)', 'rw': 'Aderesi ntiyafashwe (ntibyihutirwa)'},
+    'location_permission_denied': {'en': 'Location permission denied', 'fr': 'Permission de localisation refusée', 'rw': 'Uburenganzira bwo kubona aderesi bwanze'},
     'age':               {'en': 'Age',                 'fr': 'Âge',                'rw': 'Imyaka'},
     'gender':            {'en': 'Gender',              'fr': 'Genre',              'rw': 'Igitsina'},
     'phone':             {'en': 'Phone',               'fr': 'Téléphone',          'rw': 'Telefoni'},
@@ -413,6 +417,83 @@ abstract class AppL10n {
     },
     'sync_failures_recorded_offline': {'en': 'Recorded offline', 'fr': 'Enregistré hors ligne', 'rw': 'Byanditswe nta murandasi'},
     'sync_failures_dismiss': {'en': 'Dismiss', 'fr': 'Ignorer', 'rw': 'Hagarika'},
+    'last_synced':       {'en': 'Last synced {time}', 'fr': 'Dernière sync {time}', 'rw': 'Guhuza biheruka {time}'},
+    'last_synced_stale': {
+      'en': 'Not synced in over 24 hours ({time}) — connect to the internet soon',
+      'fr': 'Pas synchronisé depuis plus de 24 heures ({time}) — connectez-vous bientôt à internet',
+      'rw': 'Ntibyahujwe mu masaha 24 ashize ({time}) — huza interineti vuba',
+    },
+    'adverse_event_grade': {'en': 'Severity grade', 'fr': 'Niveau de gravité', 'rw': 'Urwego rw\'ikibazo'},
+    'adverse_event_grade_hint': {
+      'en': 'How severe are the side effects? (1 = mild, 4 = life-threatening)',
+      'fr': 'Quelle est la gravité des effets secondaires ? (1 = léger, 4 = mortel)',
+      'rw': 'Ikibazo ni iki ku rugero rungana? (1 = gito, 4 = kibangamiye ubuzima)',
+    },
+    'grade_label': {'en': 'Grade', 'fr': 'Niveau', 'rw': 'Urwego'},
+    'grade_severe_alert_notice': {
+      'en': 'Grade 3–4 will immediately alert clinical staff.',
+      'fr': 'Un niveau 3-4 alertera immédiatement le personnel clinique.',
+      'rw': 'Urwego rwa 3-4 ruzahita rumenyesha abakozi b\'ubuvuzi.',
+    },
+    'patient_consent_title': {'en': 'Patient consent', 'fr': 'Consentement du patient', 'rw': 'Uburenganzira bw\'umurwayi'},
+    'patient_consent_body': {
+      'en': 'Before saving this record, read the patient (or their guardian) '
+          'their rights: their HIV/TB information will be stored digitally and '
+          'shared only with their care team. They may ask for a copy of their '
+          'data, or to have it deleted, at any time. This record cannot be '
+          'saved without their consent.',
+      'fr': 'Avant d\'enregistrer ce dossier, expliquez au patient (ou à son '
+          'tuteur) ses droits : ses informations VIH/TB seront stockées '
+          'numériquement et partagées uniquement avec son équipe de soins. Ce '
+          'dossier ne peut pas être enregistré sans son consentement.',
+      'rw': 'Mbere yo kubika iyi nyandiko, menyesha umurwayi (cyangwa '
+          'umurera we) uburenganzira bwe: amakuru ye y\'ubuzima azabikwa mu '
+          'buryo bw\'ikoranabuhanga kandi asangirwa gusa n\'itsinda rimwitaho. '
+          'Iyi nyandiko ntishobora kubikwa nta bwemezo bwe.',
+    },
+    'patient_consent_checkbox': {
+      'en': 'The patient (or guardian) has agreed to data collection',
+      'fr': 'Le patient (ou son tuteur) a accepté la collecte de données',
+      'rw': 'Umurwayi (cyangwa umurera we) yemeye gukoreshwa kw\'amakuru ye',
+    },
+    'patient_consent_required_notice': {
+      'en': 'You must confirm the patient consented before saving this record.',
+      'fr': 'Vous devez confirmer le consentement du patient avant d\'enregistrer.',
+      'rw': 'Ugomba kwemeza ko umurwayi yemeye mbere yo kubika iyi nyandiko.',
+    },
+    'none': {'en': 'None', 'fr': 'Aucun', 'rw': 'Nta na kimwe'},
+    'conflict_title': {'en': 'Someone else edited this visit', 'fr': 'Une autre personne a modifié cette visite', 'rw': 'Undi muntu yahinduye iyi gusura'},
+    'conflict_subtitle': {
+      'en': 'This visit was updated elsewhere before your edit was saved. Choose which value to keep for each field below.',
+      'fr': 'Cette visite a été mise à jour ailleurs avant que votre modification ne soit enregistrée. Choisissez la valeur à conserver pour chaque champ ci-dessous.',
+      'rw': 'Iyi gusura yahinduwe ahandi mbere y\'uko ihinduka ryawe ribikwa. Hitamo agaciro ugomba gukomeza kuri buri murongo hano hasi.',
+    },
+    'conflict_no_field_changes': {
+      'en': 'No conflicting fields — the recordVersion changed but your edited fields still match. Saving again with the latest version.',
+      'fr': 'Aucun champ en conflit — la recordVersion a changé mais vos champs modifiés correspondent toujours. Nouvel enregistrement avec la dernière version.',
+      'rw': 'Nta mirongo inyuranye — recordVersion yahindutse ariko imirongo wahinduye iracyahuye. Kubika ukoresheje verisiyo iheruka.',
+    },
+    'conflict_mine': {'en': 'Your edit', 'fr': 'Votre modification', 'rw': 'Iyo wahinduye'},
+    'conflict_current': {'en': 'Current (saved)', 'fr': 'Actuel (enregistré)', 'rw': 'Iriho (byabitswe)'},
+    'conflict_resolve_save': {'en': 'Save resolved visit', 'fr': 'Enregistrer la visite résolue', 'rw': 'Bika gusura byakemuwe'},
+    'referral_initiated': {'en': 'Referral initiated', 'fr': 'Référence initiée', 'rw': 'Kohereza byatangiye'},
+    'referral_initiated_sub': {
+      'en': 'Confirm you referred this patient to the health facility for this adverse event',
+      'fr': 'Confirmez que vous avez référé ce patient à l\'établissement de santé pour cet effet indésirable',
+      'rw': 'Emeza ko wohereje uyu murwayi ku ivuriro kubera iki kibazo',
+    },
+    'referral_initiated_warning': {
+      'en': 'A grade 3/4 adverse event normally requires an immediate clinical referral.',
+      'fr': 'Un effet indésirable de grade 3/4 nécessite normalement une référence clinique immédiate.',
+      'rw': 'Ikibazo cy\'urwego rwa 3/4 gisaba kohereza umurwayi ku ivuriro vuba.',
+    },
+    'edit_visit': {'en': 'Edit visit', 'fr': 'Modifier la visite', 'rw': 'Hindura gusura'},
+    'visit_updated': {'en': 'Visit updated', 'fr': 'Visite mise à jour', 'rw': 'Gusura byavuguruwe'},
+    'pending_sync_items': {
+      'en': '{count} item(s) queued — will sync when online',
+      'fr': '{count} élément(s) en attente — se synchronisera en ligne',
+      'rw': '{count} ibintu bitegereje — bizahuzwa nimara kuboneka interineti',
+    },
     'sync_failures_dismiss_confirm': {
       'en': 'Dismiss this? You\'ll need to re-enter it manually if it\'s still needed.',
       'fr': 'Ignorer ceci ? Vous devrez le saisir à nouveau manuellement si nécessaire.',

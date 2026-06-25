@@ -78,6 +78,20 @@ class CHWRepository {
         .toList();
   }
 
+  /// Throws DioException with statusCode 409 if [req.recordVersion] is stale
+  /// (the visit was edited elsewhere since this device last loaded it).
+  Future<HomeVisitModel> updateVisit(String visitId, UpdateHomeVisitRequest req) async {
+    final r = await _client.put(ApiEndpoints.chwUpdateVisit(visitId), data: req.toJson());
+    return HomeVisitModel.fromJson(r.data as Map<String, dynamic>);
+  }
+
+  /// Fetches the current server-side state of a visit — used after a 409 to
+  /// show the CHW what changed since they loaded their local copy.
+  Future<HomeVisitModel> getVisitById(String visitId) async {
+    final r = await _client.get(ApiEndpoints.chwGetVisit(visitId));
+    return HomeVisitModel.fromJson(r.data as Map<String, dynamic>);
+  }
+
   Future<Map<String, dynamic>> screenPatient(RegisterPatientRequest req) async {
     final r = await _client.post(ApiEndpoints.screenPatient, data: req.toJson());
     return r.data as Map<String, dynamic>;

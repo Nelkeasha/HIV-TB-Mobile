@@ -70,7 +70,7 @@ class LtfuTracingTab extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
 
-              // Urgent (CHW_ASSIGNED / ≥14 days)
+              // Urgent (IIT_ESCALATED / ≥14 days)
               if (urgent.isNotEmpty) ...[
                 _SectionHeader(
                     title: l('urgent_tracing_required'),
@@ -192,9 +192,9 @@ class _TracingTaskCard extends ConsumerWidget {
 
   Color get _statusColor {
     switch (task.status) {
-      case 'CHW_ASSIGNED':
+      case 'IIT_ESCALATED':
         return AppColors.riskCritical;
-      case 'LTFU_CONFIRMED':
+      case 'TREATMENT_INTERRUPTED':
       case 'ESCALATED':
         return AppColors.riskCritical;
       case 'LATE':
@@ -208,9 +208,9 @@ class _TracingTaskCard extends ConsumerWidget {
     switch (task.status) {
       case 'LATE':
         return l('status_late');
-      case 'CHW_ASSIGNED':
+      case 'IIT_ESCALATED':
         return l('status_tracing');
-      case 'LTFU_CONFIRMED':
+      case 'TREATMENT_INTERRUPTED':
         return l('status_ltfu');
       case 'ESCALATED':
         return l('status_escalated');
@@ -335,7 +335,7 @@ class _TracingTaskCard extends ConsumerWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  if (task.status != 'LTFU_CONFIRMED' &&
+                  if (task.status != 'TREATMENT_INTERRUPTED' &&
                       task.status != 'ESCALATED') ...[
                     Expanded(
                       child: OutlinedButton.icon(

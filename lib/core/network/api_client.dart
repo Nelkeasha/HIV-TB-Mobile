@@ -84,11 +84,17 @@ class ApiClient {
           return 'No internet connection. Check your network and try again.';
         case DioExceptionType.badResponse:
           final code = e.response?.statusCode;
-          if (code == 400) return _extractValidationMessage(e.response?.data);
+          if (code == 400) {
+            return _extractValidationMessage(e.response?.data,
+                fallback: 'Some information is missing or incorrect. Please check and try again.');
+          }
           if (code == 401) return 'Your session has expired. Please sign in again.';
           if (code == 403) return 'You do not have permission to do this.';
           if (code == 404) return 'The requested information was not found.';
-          if (code == 409) return 'This record already exists.';
+          if (code == 409) {
+            return _extractValidationMessage(e.response?.data,
+                fallback: 'This conflicts with an existing record, or was changed elsewhere. Reload and try again.');
+          }
           if (code != null && code >= 500) return 'Server error. Please try again later.';
           return 'Something went wrong. Please try again.';
         default:
@@ -98,10 +104,10 @@ class ApiClient {
     return 'Something went wrong. Please try again.';
   }
 
-  /// The backend's 400 responses carry a field-level `details` map (and a
+  /// The backend's 4xx responses carry a field-level `details` map (and a
   /// `message`) — surface the real reason instead of a generic string so
   /// users (and whoever is debugging a bug report) see what actually failed.
-  static String _extractValidationMessage(dynamic data) {
+  static String _extractValidationMessage(dynamic data, {required String fallback}) {
     if (data is Map) {
       final details = data['details'];
       if (details is Map && details.isNotEmpty) {
@@ -112,6 +118,6 @@ class ApiClient {
         return message;
       }
     }
-    return 'Some information is missing or incorrect. Please check and try again.';
+    return fallback;
   }
 }

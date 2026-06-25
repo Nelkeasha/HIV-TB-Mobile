@@ -375,3 +375,33 @@ class AdminStats {
     );
   }
 }
+
+/// One row from GET /api/clinical/dashboard/adherence/below-threshold —
+/// the patient-level detail behind [AdminReportModel.belowThresholdCount].
+class BelowThresholdPatientModel {
+  final String id;
+  final String fullName;
+  final String patientCode;
+  final String? diagnosisType;
+  final String? chwName;
+  final String? riskLevel;
+
+  const BelowThresholdPatientModel({
+    required this.id,
+    required this.fullName,
+    required this.patientCode,
+    this.diagnosisType,
+    this.chwName,
+    this.riskLevel,
+  });
+
+  factory BelowThresholdPatientModel.fromJson(Map<String, dynamic> json) =>
+      BelowThresholdPatientModel(
+        id: json['id'].toString(),
+        fullName: json['fullName'] as String? ?? '',
+        patientCode: json['patientCode'] as String? ?? '',
+        diagnosisType: json['diagnosisType'] as String?,
+        chwName: json['chwName'] as String?,
+        riskLevel: json['riskLevel'] as String?,
+      );
+}

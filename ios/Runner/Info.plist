@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app uses your location to record an approximate area (not your exact address) for patients during CHW registration, to support catchment-area tracing.</string>
 </dict>
 </plist>

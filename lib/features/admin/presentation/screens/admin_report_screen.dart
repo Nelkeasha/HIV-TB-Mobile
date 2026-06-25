@@ -504,12 +504,12 @@ class _RiskBar extends StatelessWidget {
 
 // ── Adherence ──────────────────────────────────────────────────────────────────
 
-class _AdherenceCard extends StatelessWidget {
+class _AdherenceCard extends ConsumerWidget {
   final AdminReportModel report;
   const _AdherenceCard({required this.report});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final pct = report.systemAdherenceAvg.clamp(0, 100);
     final color = pct >= 80
         ? Colors.green.shade600
@@ -562,8 +562,79 @@ class _AdherenceCard extends StatelessWidget {
                     value: '${report.falseConfirmationFlagCount}',
                     color: Colors.amber.shade700)),
           ]),
+          if (report.belowThresholdCount > 0) ...[
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Patients below threshold',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700)),
+            ),
+            const SizedBox(height: 8),
+            _BelowThresholdList(ref: ref),
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _BelowThresholdList extends StatelessWidget {
+  final WidgetRef ref;
+  const _BelowThresholdList({required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(belowThresholdPatientsProvider);
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: SizedBox(
+            height: 16, width: 16,
+            child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (_, __) => Text('Could not load patient list',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+      data: (patients) {
+        if (patients.isEmpty) {
+          return Text('No patients currently below threshold',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade500));
+        }
+        final shown = patients.take(5).toList();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final p in shown)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${p.fullName}  ·  ${p.patientCode}',
+                        style: const TextStyle(fontSize: 12.5),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (p.chwName != null)
+                      Text(p.chwName!,
+                          style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                  ],
+                ),
+              ),
+            if (patients.length > shown.length)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text('+${patients.length - shown.length} more',
+                    style: TextStyle(fontSize: 11.5, color: Colors.grey.shade500)),
+              ),
+          ],
+        );
+      },
     );
   }
 }

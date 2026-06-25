@@ -13,7 +13,7 @@ class TracingTaskModel {
   final DateTime missedAppointmentDate;
   final int daysSinceMissed;
   final String reason;     // MISSED_REFILL | MISSED_APPOINTMENT | LOST_TO_FOLLOWUP
-  final String status;     // LATE | CHW_ASSIGNED | RESOLVED | LTFU_CONFIRMED | ESCALATED
+  final String status;     // LATE | IIT_ESCALATED | RESOLVED | TREATMENT_INTERRUPTED | ESCALATED
   final DateTime? ltfuConfirmedAt;
   final String? outcome;
   final String? disengagementReason;
@@ -79,8 +79,8 @@ class TracingTaskModel {
             : null,
       );
 
-  bool get isUrgent => status == 'CHW_ASSIGNED' || daysSinceMissed >= 14;
-  bool get isLtfu => status == 'LTFU_CONFIRMED' || status == 'ESCALATED';
+  bool get isUrgent => status == 'IIT_ESCALATED' || daysSinceMissed >= 14;
+  bool get isLtfu => status == 'TREATMENT_INTERRUPTED' || status == 'ESCALATED';
   bool get isResolved => status == 'RESOLVED';
 }
 
@@ -250,6 +250,8 @@ class HomeVisitRequest {
   final String? sideEffectsReported;
   final String? psychosocialNotes;
   final DateTime? nextVisitDate;
+  final int? adverseEventGrade;
+  final bool? referralInitiated;
   final String? clientRequestId;
 
   const HomeVisitRequest({
@@ -262,6 +264,8 @@ class HomeVisitRequest {
     this.sideEffectsReported,
     this.psychosocialNotes,
     this.nextVisitDate,
+    this.adverseEventGrade,
+    this.referralInitiated,
     this.clientRequestId,
   });
 
@@ -279,7 +283,55 @@ class HomeVisitRequest {
           'psychosocialNotes': psychosocialNotes,
         if (nextVisitDate != null)
           'nextVisitDate': nextVisitDate!.toIso8601String(),
+        if (adverseEventGrade != null) 'adverseEventGrade': adverseEventGrade,
+        if (referralInitiated != null) 'referralInitiated': referralInitiated,
         if (clientRequestId != null) 'clientRequestId': clientRequestId,
+      };
+}
+
+/// Corrects an already-submitted home visit. recordVersion must be the
+/// value the visit currently carries — a stale value gets a 409 back
+/// (someone else edited it since this device last loaded it).
+class UpdateHomeVisitRequest {
+  final int recordVersion;
+  final String adherenceStatus;
+  final int? pillCountRecorded;
+  final int? pillCountExpected;
+  final String? symptomsReported;
+  final String? sideEffectsReported;
+  final String? psychosocialNotes;
+  final DateTime? nextVisitDate;
+  final int? adverseEventGrade;
+  final bool? referralInitiated;
+
+  const UpdateHomeVisitRequest({
+    required this.recordVersion,
+    required this.adherenceStatus,
+    this.pillCountRecorded,
+    this.pillCountExpected,
+    this.symptomsReported,
+    this.sideEffectsReported,
+    this.psychosocialNotes,
+    this.nextVisitDate,
+    this.adverseEventGrade,
+    this.referralInitiated,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'recordVersion': recordVersion,
+        'adherenceStatus': adherenceStatus,
+        if (pillCountRecorded != null) 'pillCountRecorded': pillCountRecorded,
+        if (pillCountExpected != null) 'pillCountExpected': pillCountExpected,
+        if (symptomsReported != null && symptomsReported!.isNotEmpty)
+          'symptomsReported': symptomsReported,
+        if (sideEffectsReported != null && sideEffectsReported!.isNotEmpty)
+          'sideEffectsReported': sideEffectsReported,
+        if (psychosocialNotes != null && psychosocialNotes!.isNotEmpty)
+          'psychosocialNotes': psychosocialNotes,
+        if (nextVisitDate != null)
+          'nextVisitDate': nextVisitDate!.toIso8601String(),
+        if (referralInitiated != null) 'referralInitiated': referralInitiated,
+        if (adverseEventGrade != null) 'adverseEventGrade': adverseEventGrade,
       };
 }
 
@@ -295,6 +347,9 @@ class RegisterPatientRequest {
   final String tbStatus;
   final bool hasSmartphone;
   final String? screeningNotes;
+  final String? locationGeohash;
+  final bool consentGiven;
+  final String consentVersion;
 
   const RegisterPatientRequest({
     required this.fullName,
@@ -308,6 +363,9 @@ class RegisterPatientRequest {
     required this.tbStatus,
     this.hasSmartphone = false,
     this.screeningNotes,
+    this.locationGeohash,
+    required this.consentGiven,
+    required this.consentVersion,
   });
 
   /// Derives suspectedCondition from hivStatus + tbStatus for ScreenPatientRequest.
@@ -332,5 +390,8 @@ class RegisterPatientRequest {
         'hasSmartphone': hasSmartphone,
         'suspectedCondition': suspectedCondition,
         if (screeningNotes != null) 'screeningNotes': screeningNotes,
+        if (locationGeohash != null) 'locationGeohash': locationGeohash,
+        'consentGiven': consentGiven,
+        'consentVersion': consentVersion,
       };
 }

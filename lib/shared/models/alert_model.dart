@@ -57,6 +57,9 @@ class HomeVisitModel {
   final String? sideEffectsReported;
   final String? psychosocialNotes;
   final DateTime? nextVisitDate;
+  final int? adverseEventGrade;
+  final bool? referralInitiated;
+  final int recordVersion;
   final String? syncStatus;
   final DateTime? createdAt;
 
@@ -77,6 +80,9 @@ class HomeVisitModel {
     this.sideEffectsReported,
     this.psychosocialNotes,
     this.nextVisitDate,
+    this.adverseEventGrade,
+    this.referralInitiated,
+    this.recordVersion = 0,
     this.syncStatus,
     this.createdAt,
   });
@@ -100,6 +106,9 @@ class HomeVisitModel {
         nextVisitDate: json['nextVisitDate'] != null
             ? DateTime.tryParse(json['nextVisitDate'] as String)
             : null,
+        adverseEventGrade: json['adverseEventGrade'] as int?,
+        referralInitiated: json['referralInitiated'] as bool?,
+        recordVersion: json['recordVersion'] as int? ?? 0,
         syncStatus: json['syncStatus'] as String?,
         createdAt: json['createdAt'] != null
             ? DateTime.tryParse(json['createdAt'] as String)

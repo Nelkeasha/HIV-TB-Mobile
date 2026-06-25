@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_l10n.dart';
 import '../../../../core/l10n/l10n_provider.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/utils/geohash.dart';
 import '../../../../core/utils/validators.dart';
 import '../../data/chw_repository.dart';
 import '../../domain/chw_models.dart';
@@ -37,6 +39,15 @@ class _RegisterPatientScreenState
   bool _hasSmartphone = false;
   int  _currentStep = 0;
 
+  String? _locationGeohash;
+  bool _capturingLocation = false;
+
+  /// Patient must explicitly consent, in person, before this record can be
+  /// created (Rwanda Law No. 058/2021 — documented informed consent for
+  /// digital storage of special-category health data).
+  bool _consentGiven = false;
+  static const String _kPatientConsentVersion = '2026-06-v1';
+
   // Populated after successful submission
   String? _referralId;
   String? _patientCode;
@@ -50,6 +61,37 @@ class _RegisterPatientScreenState
     _districtCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _captureLocation() async {
+    setState(() => _capturingLocation = true);
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw const FormatException('location_permission_denied');
+      }
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+      );
+      final hash = encodeGeohash(position.latitude, position.longitude);
+      if (!mounted) return;
+      setState(() => _locationGeohash = hash);
+    } catch (e) {
+      if (!mounted) return;
+      final lang = ref.read(languageProvider);
+      final msg = e is FormatException && e.message == 'location_permission_denied'
+          ? AppL10n.t('location_permission_denied', lang)
+          : ApiClient.friendlyError(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: AppColors.error),
+      );
+    } finally {
+      if (mounted) setState(() => _capturingLocation = false);
+    }
   }
 
   Future<void> _submit() async {
@@ -67,6 +109,9 @@ class _RegisterPatientScreenState
         tbStatus:      _tbStatus,
         hasSmartphone: _hasSmartphone,
         screeningNotes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        locationGeohash: _locationGeohash,
+        consentGiven: _consentGiven,
+        consentVersion: _kPatientConsentVersion,
       );
 
       final result = await ref.read(chwRepositoryProvider).screenPatient(req);
@@ -223,6 +268,20 @@ class _RegisterPatientScreenState
       body: Stepper(
           currentStep: _currentStep,
           onStepContinue: () {
+            if (_currentStep == 3) {
+              if (!_consentGiven) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(l('patient_consent_required_notice')),
+                    backgroundColor: AppColors.error,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                return;
+              }
+              _submit();
+              return;
+            }
             if (!_stepFormKeys[_currentStep].currentState!.validate()) return;
             if (_currentStep == 0 && _dob == null) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -234,11 +293,7 @@ class _RegisterPatientScreenState
               );
               return;
             }
-            if (_currentStep < 2) {
-              setState(() => _currentStep++);
-            } else {
-              _submit();
-            }
+            setState(() => _currentStep++);
           },
           onStepCancel: () {
             if (_currentStep > 0) setState(() => _currentStep--);
@@ -248,16 +303,18 @@ class _RegisterPatientScreenState
             child: Row(
               children: [
                 ElevatedButton(
-                  onPressed: _isLoading ? null : details.onStepContinue,
+                  onPressed: (_isLoading || (_currentStep == 3 && !_consentGiven))
+                      ? null
+                      : details.onStepContinue,
                   style: ElevatedButton.styleFrom(
                       minimumSize: const Size(120, 44)),
-                  child: _isLoading && _currentStep == 2
+                  child: _isLoading && _currentStep == 3
                       ? const SizedBox(
                           width: 18, height: 18,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white),
                         )
-                      : Text(_currentStep < 2 ? l('continue_btn') : l('submit_screening')),
+                      : Text(_currentStep < 3 ? l('continue_btn') : l('submit_screening')),
                 ),
                 if (_currentStep > 0) ...[
                   const SizedBox(width: 12),
@@ -391,6 +448,34 @@ class _RegisterPatientScreenState
                       prefixIcon: const Icon(Icons.location_city_outlined, size: 20),
                     ),
                   ),
+                  const SizedBox(height: 14),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      _locationGeohash != null
+                          ? Icons.gps_fixed_rounded
+                          : Icons.gps_not_fixed_rounded,
+                      color: _locationGeohash != null
+                          ? AppColors.primary
+                          : AppColors.textHint,
+                    ),
+                    title: Text(
+                      _locationGeohash != null
+                          ? l('location_captured')
+                          : l('location_not_captured'),
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    trailing: _capturingLocation
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : TextButton(
+                            onPressed: _captureLocation,
+                            child: Text(l('capture_location')),
+                          ),
+                  ),
                 ],
                 ),
               ),
@@ -448,6 +533,50 @@ class _RegisterPatientScreenState
                   ),
                 ],
                 ),
+              ),
+            ),
+            Step(
+              title: Text(l('patient_consent_title')),
+              isActive: _currentStep >= 3,
+              content: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l('patient_consent_body'),
+                    style: const TextStyle(fontSize: 13, height: 1.5, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: () => setState(() => _consentGiven = !_consentGiven),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Checkbox(
+                          value: _consentGiven,
+                          activeColor: AppColors.primary,
+                          onChanged: (v) => setState(() => _consentGiven = v ?? false),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(
+                              l('patient_consent_checkbox'),
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!_consentGiven)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12, top: 4),
+                      child: Text(
+                        l('patient_consent_required_notice'),
+                        style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+                      ),
+                    ),
+                ],
               ),
             ),
           ],

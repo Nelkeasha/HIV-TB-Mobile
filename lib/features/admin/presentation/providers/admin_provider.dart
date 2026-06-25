@@ -147,4 +147,9 @@ final adminUsersProvider =
 final adminReportProvider = FutureProvider.autoDispose<AdminReportModel>(
     (ref) => ref.read(adminRepositoryProvider).getReportSummary());
 
+// Patient-level detail behind AdminReportModel.belowThresholdCount
+final belowThresholdPatientsProvider =
+    FutureProvider.autoDispose<List<BelowThresholdPatientModel>>(
+        (ref) => ref.read(adminRepositoryProvider).getBelowThresholdPatients());
+
 // Restock provider removed — stock management feature deleted

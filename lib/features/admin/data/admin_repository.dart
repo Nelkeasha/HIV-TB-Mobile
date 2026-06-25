@@ -65,6 +65,13 @@ class AdminRepository {
     return AdminReportModel.fromJson(res.data as Map<String, dynamic>);
   }
 
+  Future<List<BelowThresholdPatientModel>> getBelowThresholdPatients() async {
+    final res = await _client.get(ApiEndpoints.clinicalBelowThreshold);
+    return (res.data as List)
+        .map((e) => BelowThresholdPatientModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<List<AlertModel>> getAlerts() async {
     final res = await _client.get(ApiEndpoints.clinicalAlerts);
     return (res.data as List)

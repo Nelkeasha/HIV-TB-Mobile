@@ -12,6 +12,7 @@ import '../../../../shared/widgets/loading_overlay.dart';
 import '../../../../shared/widgets/pending_assignment_banner.dart';
 import '../../../../shared/widgets/risk_badge.dart';
 import '../../../../shared/widgets/sync_failure_banner.dart';
+import '../../../../shared/widgets/last_synced_banner.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../domain/chw_models.dart';
 import '../providers/chw_provider.dart';
@@ -251,6 +252,7 @@ class _HomeTab extends ConsumerWidget {
         children: [
           PendingAssignmentBanner(lang: lang),
           SyncFailureBanner(lang: lang),
+          LastSyncedBanner(lang: lang),
 
           // Date chip
           Row(

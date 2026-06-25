@@ -7,6 +7,7 @@ import '../../../../core/l10n/app_l10n.dart';
 import '../../../../core/l10n/l10n_provider.dart';
 import '../../../../core/utils/validators.dart';
 import '../providers/auth_provider.dart';
+import '../role_router.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -55,37 +56,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         );
   }
 
-  void _navigateByRole(String? role) {
-    switch (role) {
-      case 'CHW':
-        context.go(AppRoutes.chwHome);
-        break;
-      case 'FACILITY_PROVIDER':
-      case 'SUPERVISOR':
-        _rejectWebOnlyRole();
-        break;
-      case 'SYSTEM_ADMIN':
-      case 'ADMIN':
-        context.go(AppRoutes.adminDashboard);
-        break;
-      default:
-        context.go(AppRoutes.patientHome);
-    }
-  }
-
-  void _rejectWebOnlyRole() {
-    final lang = ref.read(languageProvider);
-    final l = (String k) => AppL10n.t(k, lang);
-    ref.read(authProvider.notifier).logout();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l('web_only_role_message')),
-        backgroundColor: AppColors.error,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 5),
-      ),
-    );
-  }
+  void _navigateByRole(String? role) => navigateByAuthRole(context, ref, role);
 
   @override
   Widget build(BuildContext context) {

@@ -50,6 +50,12 @@ final pendingActionCountProvider = StateProvider<int>((ref) => 0);
 /// [FailedActionDb]. UI reads this to show a "Needs Attention" banner.
 final failedActionCountProvider = StateProvider<int>((ref) => 0);
 
+/// The last time a sync pass reached the server without a connectivity
+/// failure. Null until the first successful pass this session. UI reads this
+/// (together with [pendingActionCountProvider]) to show a "Last synced Xm
+/// ago" / "Offline since Xm ago" banner.
+final lastSyncedAtProvider = StateProvider<DateTime?>((ref) => null);
+
 /// The actual list, for the "Needs Attention" screen. Invalidate after a
 /// dismiss to refresh.
 final failedActionsProvider = FutureProvider.autoDispose<List<FailedAction>>((ref) {
@@ -105,14 +111,20 @@ class SyncManager {
       final client = _ref.read(apiClientProvider);
       final actions = await PendingActionDb.getAll();
 
+      // Nothing queued means nothing to report — leave lastSyncedAtProvider
+      // untouched rather than claiming a "sync" that made no network call.
       for (final action in actions) {
         try {
           await client.post(action.path, data: action.payload);
           await PendingActionDb.remove(action.id!);
+          _ref.read(lastSyncedAtProvider.notifier).state = DateTime.now();
         } catch (e) {
           if (isConnectivityFailure(e)) {
             break; // still offline — stop here, the rest stay queued for next cycle
           }
+          // A reachable server responded (even if it rejected the action) —
+          // that's still evidence connectivity is up.
+          _ref.read(lastSyncedAtProvider.notifier).state = DateTime.now();
           if (_isTerminalRejection(e)) {
             await _moveToFailed(action, _reasonFor(e));
           } else {
