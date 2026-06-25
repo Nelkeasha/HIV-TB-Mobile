@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 abstract class AppColors {
-  // Primary brand — Deep Teal
-  static const Color primary = Color(0xFF006D77);
-  static const Color primaryDark = Color(0xFF004E57);
-  static const Color primaryLight = Color(0xFF83C5BE);
-  static const Color primaryContainer = Color(0xFFCCEEF1);
+  // Primary brand — DMC Red
+  static const Color primary = Color(0xFFD12C1F);
+  static const Color primaryDark = Color(0xFF8B1A11);
+  static const Color primaryLight = Color(0xFFF07068);
+  static const Color primaryContainer = Color(0xFFFDDCDA);
 
   // Accent — Warm Coral
   static const Color accent = Color(0xFFE29578);
@@ -50,7 +50,7 @@ abstract class AppColors {
   static const Color stockCritical = Color(0xFFC0392B);
 
   // Gradient stops
-  static const Color gradientStart = Color(0xFF006D77);
-  static const Color gradientEnd = Color(0xFF004E57);
-  static const Color gradientAccent = Color(0xFF83C5BE);
+  static const Color gradientStart = Color(0xFFD12C1F);
+  static const Color gradientEnd = Color(0xFF8B1A11);
+  static const Color gradientAccent = Color(0xFFF07068);
 }

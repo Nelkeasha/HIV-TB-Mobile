@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/admin_models.dart';
 import '../providers/admin_provider.dart';
+import '../../../../core/constants/app_colors.dart';
 
 // ── Colour tokens ──────────────────────────────────────────────────────────────
 const _indigo = Color(0xFF283593);
@@ -215,7 +216,7 @@ class _RoleTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = [
-      ('CHWs', report.totalChw, Icons.directions_walk_rounded, Colors.teal),
+      ('CHWs', report.totalChw, Icons.directions_walk_rounded, AppColors.primary),
       ('Providers', report.totalProviders, Icons.local_hospital_rounded,
           Colors.blue.shade700),
       ('Supervisors', report.totalSupervisors, Icons.supervisor_account_rounded,
@@ -389,13 +390,13 @@ class _PatientOverviewCard extends StatelessWidget {
     return _SectionCard(
       title: 'Patient Overview',
       icon: Icons.people_rounded,
-      iconColor: Colors.teal,
+      iconColor: AppColors.primary,
       child: Column(
         children: [
           _BigStat(
               label: 'Total Active Patients',
               value: '${report.totalActivePatients}',
-              color: Colors.teal),
+              color: AppColors.primary),
           const SizedBox(height: 12),
           Row(children: [
             Expanded(
