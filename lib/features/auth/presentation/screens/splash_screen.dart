@@ -104,40 +104,43 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Logo
+                        // DMC Logo on white rounded card
                         Container(
-                          width: 100,
-                          height: 100,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 14),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(28),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.3),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.medical_services_rounded,
-                            size: 52,
                             color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Image.asset(
+                            'assets/images/dmc_logo.png',
+                            width: 180,
+                            fit: BoxFit.contain,
                           ),
                         ),
                         const SizedBox(height: 28),
                         const Text(
-                          'HIV/TB Monitor',
+                          'HIV/TB Monitoring System',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 30,
+                            fontSize: 20,
                             fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
+                            letterSpacing: 0.2,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Text(
-                          'Dream Medical Center, Rwanda',
+                          'Kigali, Rwanda',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.75),
+                            fontSize: 13,
                             fontWeight: FontWeight.w400,
                           ),
                         ),
