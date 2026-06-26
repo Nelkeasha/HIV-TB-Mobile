@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../network/api_client.dart';
@@ -83,6 +84,7 @@ class SyncManager {
   SyncManager(this._ref);
 
   void start() {
+    if (kIsWeb) return; // sqflite offline queue not supported on web
     _refreshCount();
     _periodicTimer = Timer.periodic(const Duration(seconds: 60), (_) => flush());
     _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'pending_action_db.dart' show PendingActionType, PendingActionTypeX;
@@ -45,6 +46,7 @@ class FailedActionDb {
   static Database? _db;
 
   static Future<Database> _open() async {
+    if (kIsWeb) throw UnsupportedError('FailedActionDb not available on web');
     if (_db != null) return _db!;
     final dir = await getDatabasesPath();
     _db = await openDatabase(
@@ -64,23 +66,27 @@ class FailedActionDb {
   }
 
   static Future<void> add(FailedAction action) async {
+    if (kIsWeb) return;
     final db = await _open();
     await db.insert('failed_actions', action._toRow());
   }
 
   static Future<List<FailedAction>> getAll() async {
+    if (kIsWeb) return [];
     final db = await _open();
     final rows = await db.query('failed_actions', orderBy: 'failed_at DESC');
     return rows.map(FailedAction._fromRow).toList();
   }
 
   static Future<int> count() async {
+    if (kIsWeb) return 0;
     final db = await _open();
     final result = await db.rawQuery('SELECT COUNT(*) AS c FROM failed_actions');
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
   static Future<void> dismiss(int id) async {
+    if (kIsWeb) return;
     final db = await _open();
     await db.delete('failed_actions', where: 'id = ?', whereArgs: [id]);
   }

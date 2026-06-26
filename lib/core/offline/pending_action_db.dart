@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -59,6 +60,7 @@ class PendingActionDb {
   static const _maxRetries = 8;
 
   static Future<Database> _open() async {
+    if (kIsWeb) throw UnsupportedError('PendingActionDb not available on web');
     if (_db != null) return _db!;
     final dir = await getDatabasesPath();
     _db = await openDatabase(
@@ -79,29 +81,34 @@ class PendingActionDb {
   }
 
   static Future<void> enqueue(PendingAction action) async {
+    if (kIsWeb) return;
     final db = await _open();
     await db.insert('pending_actions', action._toRow());
   }
 
   static Future<List<PendingAction>> getAll() async {
+    if (kIsWeb) return [];
     final db = await _open();
     final rows = await db.query('pending_actions', orderBy: 'created_at ASC');
     return rows.map(PendingAction._fromRow).toList();
   }
 
   static Future<int> count() async {
+    if (kIsWeb) return 0;
     final db = await _open();
     final result = await db.rawQuery('SELECT COUNT(*) AS c FROM pending_actions');
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
   static Future<void> remove(int id) async {
+    if (kIsWeb) return;
     final db = await _open();
     await db.delete('pending_actions', where: 'id = ?', whereArgs: [id]);
   }
 
   /// Returns true if the action has exceeded its retry budget and was dropped.
   static Future<bool> recordFailureAndMaybeDrop(int id, int currentRetryCount) async {
+    if (kIsWeb) return false;
     final db = await _open();
     if (currentRetryCount + 1 >= _maxRetries) {
       await db.delete('pending_actions', where: 'id = ?', whereArgs: [id]);

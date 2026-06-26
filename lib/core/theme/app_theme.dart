@@ -40,36 +40,36 @@ abstract class AppTheme {
       scaffoldBackgroundColor: AppColors.background,
     );
 
-    final textTheme = GoogleFonts.poppinsTextTheme(base.textTheme).copyWith(
-      displayLarge: GoogleFonts.poppins(
+    final textTheme = GoogleFonts.ibmPlexSansTextTheme(base.textTheme).copyWith(
+      displayLarge: GoogleFonts.ibmPlexSans(
           fontSize: 32, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-      displayMedium: GoogleFonts.poppins(
+      displayMedium: GoogleFonts.ibmPlexSans(
           fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
-      displaySmall: GoogleFonts.poppins(
+      displaySmall: GoogleFonts.ibmPlexSans(
           fontSize: 24, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      headlineLarge: GoogleFonts.poppins(
+      headlineLarge: GoogleFonts.ibmPlexSans(
           fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      headlineMedium: GoogleFonts.poppins(
+      headlineMedium: GoogleFonts.ibmPlexSans(
           fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      headlineSmall: GoogleFonts.poppins(
+      headlineSmall: GoogleFonts.ibmPlexSans(
           fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      titleLarge: GoogleFonts.poppins(
+      titleLarge: GoogleFonts.ibmPlexSans(
           fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-      titleMedium: GoogleFonts.poppins(
+      titleMedium: GoogleFonts.ibmPlexSans(
           fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textPrimary),
-      titleSmall: GoogleFonts.poppins(
+      titleSmall: GoogleFonts.ibmPlexSans(
           fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
-      bodyLarge: GoogleFonts.poppins(
+      bodyLarge: GoogleFonts.ibmPlexSans(
           fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
-      bodyMedium: GoogleFonts.poppins(
+      bodyMedium: GoogleFonts.ibmPlexSans(
           fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textPrimary),
-      bodySmall: GoogleFonts.poppins(
+      bodySmall: GoogleFonts.ibmPlexSans(
           fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondary),
-      labelLarge: GoogleFonts.poppins(
+      labelLarge: GoogleFonts.ibmPlexSans(
           fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textOnPrimary),
-      labelMedium: GoogleFonts.poppins(
+      labelMedium: GoogleFonts.ibmPlexSans(
           fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
-      labelSmall: GoogleFonts.poppins(
+      labelSmall: GoogleFonts.ibmPlexSans(
           fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textHint),
     );
 
@@ -81,7 +81,7 @@ abstract class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.poppins(
+        titleTextStyle: GoogleFonts.ibmPlexSans(
             fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
         systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
@@ -101,7 +101,7 @@ abstract class AppTheme {
           elevation: 0,
           minimumSize: const Size(double.infinity, 52),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.ibmPlexSans(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -110,13 +110,13 @@ abstract class AppTheme {
           side: const BorderSide(color: AppColors.primary, width: 1.5),
           minimumSize: const Size(double.infinity, 52),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.ibmPlexSans(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primary,
-          textStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500),
+          textStyle: GoogleFonts.ibmPlexSans(fontSize: 14, fontWeight: FontWeight.w500),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -144,13 +144,13 @@ abstract class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.error, width: 2),
         ),
-        hintStyle: GoogleFonts.poppins(color: AppColors.textHint, fontSize: 14),
+        hintStyle: GoogleFonts.ibmPlexSans(color: AppColors.textHint, fontSize: 14),
         labelStyle:
-            GoogleFonts.poppins(color: AppColors.textSecondary, fontSize: 14),
+            GoogleFonts.ibmPlexSans(color: AppColors.textSecondary, fontSize: 14),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceVariant,
-        labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500),
+        labelStyle: GoogleFonts.ibmPlexSans(fontSize: 12, fontWeight: FontWeight.w500),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       ),
@@ -169,12 +169,12 @@ abstract class AppTheme {
         shadowColor: Colors.black.withValues(alpha: 0.08),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return GoogleFonts.poppins(
+            return GoogleFonts.ibmPlexSans(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: AppColors.primary);
           }
-          return GoogleFonts.poppins(
+          return GoogleFonts.ibmPlexSans(
               fontSize: 11,
               fontWeight: FontWeight.w400,
               color: AppColors.textHint);
@@ -190,7 +190,7 @@ abstract class AppTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.textPrimary,
         contentTextStyle:
-            GoogleFonts.poppins(color: Colors.white, fontSize: 13),
+            GoogleFonts.ibmPlexSans(color: Colors.white, fontSize: 13),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
