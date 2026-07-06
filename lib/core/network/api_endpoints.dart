@@ -24,6 +24,9 @@ abstract class ApiEndpoints {
   // CHW
   static const String chwDashboard = '/api/chw/dashboard';
   static const String chwPriorityList = '/api/chw/priority-list';
+  // Triggered home-visit tasks (Part 3)
+  static const String homeVisitTasks = '/api/home-visit-tasks';
+  static String completeHomeVisitTask(String id) => '/api/home-visit-tasks/$id/complete';
 
   // Patient — unified /api/v1/patients/
   static const String screenPatient   = '/api/v1/patients/screen';    // CHW provisional

@@ -312,6 +312,38 @@ abstract class AppL10n {
     'se_dizziness':      {'en': 'Dizziness / headache','fr': 'Vertiges / maux de tête','rw': 'Isereri / kuribwa umutwe'},
     'other_side_effects_optional': {'en': 'Other side effects (optional)','fr': 'Autres effets (facultatif)','rw': 'Izindi ngaruka (si ngombwa)'},
 
+    // ── Differentiated DOT model — home visit cards ──────────────────────
+    'card_art_title':    {'en': 'HIV / ART monitoring','fr': 'Suivi VIH / TARV','rw': 'Gukurikirana VIH / imiti ya ARV'},
+    'card_dot_title':    {'en': 'TB / Directly Observed Therapy','fr': 'TB / Thérapie sous observation directe','rw': 'TB / Kuvura hakurikiranwe'},
+    'dot_regulatory_note': {'en': 'You observe and document the patient taking their OWN medication. You do not dispense or hand over any medicine.','fr': 'Vous observez et documentez le patient prenant son PROPRE médicament. Vous ne distribuez ni ne remettez aucun médicament.','rw': 'Witegereza kandi wandika umurwayi afata imiti ye BWITE. Ntabwo utanga cyangwa uha umurwayi imiti.'},
+    'art_side_effects':  {'en': 'ART side effects','fr': 'Effets secondaires du TARV','rw': 'Ingaruka z\'imiti ya ARV'},
+    'art_side_effects_sub': {'en': 'Tap any TLD side effect present','fr': 'Cochez tout effet TLD présent','rw': 'Kanda ku ngaruka ya TLD iriho'},
+    'se_vomiting':       {'en': 'Persistent vomiting','fr': 'Vomissements persistants','rw': 'Kuruka bikabije'},
+    'se_joint_pain':     {'en': 'Joint pain','fr': 'Douleurs articulaires','rw': 'Kubabara mu ngingo'},
+    'se_vision_changes': {'en': 'Vision changes','fr': 'Changements de vision','rw': 'Guhinduka kw\'ukubona'},
+    'tb_side_effects':   {'en': 'TB medication side effects','fr': 'Effets secondaires des médicaments TB','rw': 'Ingaruka z\'imiti ya TB'},
+    'tb_side_effects_sub': {'en': 'Tap any side effect present','fr': 'Cochez tout effet présent','rw': 'Kanda ku ngaruka iriho'},
+    'dot_observed':      {'en': 'Observed patient swallow today\'s dose','fr': 'Patient observé avalant la dose du jour','rw': 'Nabonye umurwayi amira imiti y\'uyu munsi'},
+    'dot_observed_sub':  {'en': 'You watched the patient take their own dose','fr': 'Vous avez vu le patient prendre sa propre dose','rw': 'Witegereje umurwayi afata imiti ye'},
+    'infection_control': {'en': 'Household infection control','fr': 'Contrôle des infections au foyer','rw': 'Kwirinda kwanduza mu rugo'},
+    'infection_control_sub': {'en': 'TB transmission prevention at home','fr': 'Prévention de la transmission de la TB','rw': 'Kwirinda ikwirakwizwa rya TB'},
+    'home_ventilation_ok': {'en': 'Home has adequate ventilation','fr': 'Le domicile est bien ventilé','rw': 'Inzu ihumeka neza'},
+    'home_ventilation_sub': {'en': 'Airflow reduces TB spread','fr': 'Aération réduisant la propagation de la TB','rw': 'Umuyaga ugabanya ikwirakwizwa rya TB'},
+    'cough_hygiene_ok':  {'en': 'Patient practices cough hygiene','fr': 'Le patient pratique l\'hygiène de la toux','rw': 'Umurwayi yita ku isuku yo gukorora'},
+    'cough_hygiene_sub': {'en': 'Covers mouth, safe sputum disposal','fr': 'Couvre la bouche, élimination sûre des crachats','rw': 'Apfuka umunwa, ajugunya ibikororwa neza'},
+    'next_dot':          {'en': 'Next DOT review date','fr': 'Prochaine date de revue DOT','rw': 'Itariki ikurikira yo kugenzura DOT'},
+    'next_dot_sub':      {'en': 'When is the next in-person review?','fr': 'Quand est la prochaine revue en personne ?','rw': 'Ni ryari isuzuma rikurikira imbonankubone?'},
+
+    // ── Triggered home-visit tasks (Part 3) ──────────────────────────────
+    'triggered_visits':  {'en': 'Visits needed','fr': 'Visites nécessaires','rw': 'Inzuro zisabwa'},
+    'hvt_missed_doses':  {'en': 'Missed doses','fr': 'Doses manquées','rw': 'Yasibye imiti'},
+    'hvt_side_effect':   {'en': 'Side effect','fr': 'Effet secondaire','rw': 'Ingaruka z\'imiti'},
+    'hvt_iit_escalated': {'en': 'Treatment interruption','fr': 'Interruption de traitement','rw': 'Guhagarika kuvurwa'},
+    'hvt_high_risk':     {'en': 'High risk','fr': 'Risque élevé','rw': 'Ibyago byinshi'},
+    'hvt_periodic_review': {'en': 'Periodic review','fr': 'Revue périodique','rw': 'Isuzuma rya buri gihe'},
+    'hvt_initial_assessment': {'en': 'Initial visit','fr': 'Visite initiale','rw': 'Isuzuma ry\'ibanze'},
+    'hvt_generic':       {'en': 'Visit needed','fr': 'Visite nécessaire','rw': 'Urugendo rukenewe'},
+
     // ── Registration: structured TB & HIV screening (V32) ────────────────
     'tb_q_cough':        {'en': 'Current cough','fr': 'Toux actuelle','rw': 'Inkorora iriho'},
     'tb_q_fever':        {'en': 'Fever (especially afternoon)','fr': 'Fièvre (surtout l\'après-midi)','rw': 'Umuriro (cyane cyane nyuma ya saa sita)'},
@@ -331,6 +363,12 @@ abstract class AppL10n {
     'refer_anyway_sub':  {'en': 'No risk factors, but refer based on your judgment','fr': 'Aucun facteur de risque, mais référer selon votre jugement','rw': 'Nta bimenyetso by\'ingaruka, ariko ohereza ukurikije ubushishozi bwawe'},
     'refer_reason':      {'en': 'Reason for referral','fr': 'Motif de la référence','rw': 'Impamvu yo kohereza'},
     'refer_reason_hint': {'en': 'Short reason (e.g. patient request, clinical concern)','fr': 'Motif court (p.ex. demande du patient)','rw': 'Impamvu ngufi (urugero: icyifuzo cy\'umurwayi)'},
+    'screening_for':      {'en': 'What are you screening for?','fr': 'Que dépistez-vous ?','rw': 'Urimo gupimira iki?'},
+    'screening_for_sub':  {'en': 'Choose the condition you are assessing on this visit','fr': 'Choisissez la condition évaluée lors de cette visite','rw': 'Hitamo indwara urimo gusuzuma kuri iyi nzuro'},
+    'screening_for_hiv':  {'en': 'HIV','fr': 'VIH','rw': 'VIH'},
+    'screening_for_tb':   {'en': 'TB','fr': 'TB','rw': 'Igituntu'},
+    'screening_for_both': {'en': 'Both (HIV/TB)','fr': 'Les deux (VIH/TB)','rw': 'Byombi (VIH/TB)'},
+    'screening_for_required': {'en': 'Select what you are screening for before continuing.','fr': 'Sélectionnez ce que vous dépistez avant de continuer.','rw': 'Hitamo icyo urimo gupimira mbere yo gukomeza.'},
 
     // ── Register Patient ──────────────────────────────────────────────────
     'register_patient_title':{'en': 'Register Patient',  'fr': 'Enregistrer Patient',  'rw': 'Kwandika Umurwayi'},

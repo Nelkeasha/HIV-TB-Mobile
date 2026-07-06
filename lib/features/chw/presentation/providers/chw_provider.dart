@@ -86,6 +86,12 @@ final priorityListProvider = FutureProvider<PriorityListResponse>((ref) {
   return ref.read(chwRepositoryProvider).getPriorityList();
 });
 
+// Triggered home-visit tasks (Part 3)
+final homeVisitTasksProvider =
+    FutureProvider.autoDispose<List<HomeVisitTaskModel>>((ref) {
+  return ref.read(chwRepositoryProvider).getHomeVisitTasks();
+});
+
 // Single patient
 final patientDetailProvider =
     FutureProvider.family<PatientModel, String>((ref, id) async {

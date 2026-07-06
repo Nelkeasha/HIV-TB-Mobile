@@ -32,8 +32,9 @@ class _RegisterPatientScreenState
   final _notesCtrl   = TextEditingController();
 
   String _sex       = 'MALE';
-  String _hivStatus = 'POSITIVE';
-  String _tbStatus  = 'ACTIVE';
+  /// What the CHW is screening for: 'HIV' | 'TB' | 'HIV_TB_COINFECTION'. Null
+  /// until the CHW makes an explicit choice (required before continuing).
+  String? _screeningFor;
   DateTime? _dob;
   bool _isLoading   = false;
   bool _hasSmartphone = false;
@@ -54,6 +55,26 @@ class _RegisterPatientScreenState
       _hivStiTreatment || _hivRecurrentIllness;
   bool _referAnyway = false;
   final _referReasonCtrl = TextEditingController();
+
+  bool get _isHivScreen =>
+      _screeningFor == 'HIV' || _screeningFor == 'HIV_TB_COINFECTION';
+  bool get _isTbScreen =>
+      _screeningFor == 'TB' || _screeningFor == 'HIV_TB_COINFECTION';
+
+  /// Switching the selector clears answers for any block now hidden, so stale
+  /// data from an unselected condition is never saved.
+  void _setScreeningFor(String v) => setState(() {
+        _screeningFor = v;
+        if (!_isTbScreen) {
+          _tbCough = _tbFever = _tbNightSweats = _tbWeightLoss = _tbChestPain = false;
+        }
+        if (!_isHivScreen) {
+          _hivNeverTested = _hivPartnerPositive = _hivUnprotectedSex =
+              _hivStiTreatment = _hivRecurrentIllness = false;
+          _referAnyway = false;
+          _referReasonCtrl.clear();
+        }
+      });
 
   String? _locationGeohash;
   bool _capturingLocation = false;
@@ -122,8 +143,7 @@ class _RegisterPatientScreenState
         district:      _districtCtrl.text.trim(),
         dateOfBirth:   _dob,
         sex:           _sex,
-        hivStatus:     _hivStatus,
-        tbStatus:      _tbStatus,
+        suspectedCondition: _screeningFor!,
         hasSmartphone: _hasSmartphone,
         screeningNotes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         locationGeohash: _locationGeohash,
@@ -311,6 +331,16 @@ class _RegisterPatientScreenState
                 return;
               }
               _submit();
+              return;
+            }
+            if (_currentStep == 2 && _screeningFor == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(l('screening_for_required')),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
               return;
             }
             if (!_stepFormKeys[_currentStep].currentState!.validate()) return;
@@ -527,118 +557,111 @@ class _RegisterPatientScreenState
                         height: 1.4),
                   ),
                   const SizedBox(height: 14),
-                  _DropdownField(
-                    label: l('hiv_status'),
-                    value: _hivStatus,
-                    items: const ['POSITIVE', 'NEGATIVE', 'UNKNOWN'],
-                    labels: {
-                      'POSITIVE': l('hiv_positive_suspected'),
-                      'NEGATIVE': l('hiv_negative'),
-                      'UNKNOWN':  l('hiv_unknown'),
-                    },
-                    onChanged: (v) => setState(() => _hivStatus = v!),
+
+                  // ── Single "what are you screening for?" selector ─────────
+                  _ScreenHeader(
+                      title: l('screening_for'), subtitle: l('screening_for_sub')),
+                  const SizedBox(height: 10),
+                  _ScreeningForSelector(
+                    selected: _screeningFor,
+                    lang: lang,
+                    onSelect: _setScreeningFor,
                   ),
                   const SizedBox(height: 18),
 
-                  // ── HIV testing-eligibility risk screen ──────────────────
-                  _ScreenHeader(title: l('hiv_risk_screen'), subtitle: l('hiv_risk_screen_sub')),
-                  _ScreenQuestion(
-                      text: l('hiv_q_never_tested'),
-                      value: _hivNeverTested,
-                      onChanged: (v) => setState(() => _hivNeverTested = v)),
-                  _ScreenQuestion(
-                      text: l('hiv_q_partner_positive'),
-                      value: _hivPartnerPositive,
-                      onChanged: (v) => setState(() => _hivPartnerPositive = v)),
-                  _ScreenQuestion(
-                      text: l('hiv_q_unprotected_sex'),
-                      value: _hivUnprotectedSex,
-                      onChanged: (v) => setState(() => _hivUnprotectedSex = v)),
-                  _ScreenQuestion(
-                      text: l('hiv_q_sti_treatment'),
-                      value: _hivStiTreatment,
-                      onChanged: (v) => setState(() => _hivStiTreatment = v)),
-                  _ScreenQuestion(
-                      text: l('hiv_q_recurrent_illness'),
-                      value: _hivRecurrentIllness,
-                      onChanged: (v) => setState(() => _hivRecurrentIllness = v)),
-                  if (_hivTestingReferral)
-                    _ScreenNotice(
-                        icon: Icons.local_hospital_rounded,
-                        text: l('hiv_testing_referral_notice'),
-                        color: AppColors.info)
-                  else ...[
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      title: Text(l('refer_anyway'),
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                      subtitle: Text(l('refer_anyway_sub'),
-                          style: const TextStyle(fontSize: 11)),
-                      value: _referAnyway,
-                      activeThumbColor: AppColors.info,
-                      onChanged: (v) => setState(() {
-                        _referAnyway = v;
-                        if (!v) _referReasonCtrl.clear();
-                      }),
-                    ),
-                    if (_referAnyway)
-                      TextFormField(
-                        controller: _referReasonCtrl,
-                        maxLength: 200,
-                        textCapitalization: TextCapitalization.sentences,
-                        validator: (v) =>
-                            _referAnyway ? Validators.required(v, l('refer_reason')) : null,
-                        decoration: InputDecoration(
-                          labelText: '${l('refer_reason')} *',
-                          hintText: l('refer_reason_hint'),
-                        ),
+                  // ── HIV testing-eligibility risk screen (HIV or Both) ─────
+                  if (_isHivScreen) ...[
+                    _ScreenHeader(
+                        title: l('hiv_risk_screen'), subtitle: l('hiv_risk_screen_sub')),
+                    _ScreenQuestion(
+                        text: l('hiv_q_never_tested'),
+                        value: _hivNeverTested,
+                        onChanged: (v) => setState(() => _hivNeverTested = v)),
+                    _ScreenQuestion(
+                        text: l('hiv_q_partner_positive'),
+                        value: _hivPartnerPositive,
+                        onChanged: (v) => setState(() => _hivPartnerPositive = v)),
+                    _ScreenQuestion(
+                        text: l('hiv_q_unprotected_sex'),
+                        value: _hivUnprotectedSex,
+                        onChanged: (v) => setState(() => _hivUnprotectedSex = v)),
+                    _ScreenQuestion(
+                        text: l('hiv_q_sti_treatment'),
+                        value: _hivStiTreatment,
+                        onChanged: (v) => setState(() => _hivStiTreatment = v)),
+                    _ScreenQuestion(
+                        text: l('hiv_q_recurrent_illness'),
+                        value: _hivRecurrentIllness,
+                        onChanged: (v) => setState(() => _hivRecurrentIllness = v)),
+                    if (_hivTestingReferral)
+                      _ScreenNotice(
+                          icon: Icons.local_hospital_rounded,
+                          text: l('hiv_testing_referral_notice'),
+                          color: AppColors.info)
+                    else ...[
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        title: Text(l('refer_anyway'),
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w600)),
+                        subtitle: Text(l('refer_anyway_sub'),
+                            style: const TextStyle(fontSize: 11)),
+                        value: _referAnyway,
+                        activeThumbColor: AppColors.info,
+                        onChanged: (v) => setState(() {
+                          _referAnyway = v;
+                          if (!v) _referReasonCtrl.clear();
+                        }),
                       ),
+                      if (_referAnyway)
+                        TextFormField(
+                          controller: _referReasonCtrl,
+                          maxLength: 200,
+                          textCapitalization: TextCapitalization.sentences,
+                          validator: (v) => _referAnyway
+                              ? Validators.required(v, l('refer_reason'))
+                              : null,
+                          decoration: InputDecoration(
+                            labelText: '${l('refer_reason')} *',
+                            hintText: l('refer_reason_hint'),
+                          ),
+                        ),
+                    ],
+                    const SizedBox(height: 18),
                   ],
-                  const SizedBox(height: 18),
 
-                  _DropdownField(
-                    label: l('tb_status'),
-                    value: _tbStatus,
-                    items: const ['ACTIVE', 'SUSPECTED', 'LATENT', 'NONE'],
-                    labels: {
-                      'ACTIVE':   l('tb_active_confirmed'),
-                      'SUSPECTED':l('tb_suspected_genexpert'),
-                      'LATENT':   l('tb_latent'),
-                      'NONE':     l('tb_no_signs'),
-                    },
-                    onChanged: (v) => setState(() => _tbStatus = v!),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // ── RBC TB symptom screen ────────────────────────────────
-                  _ScreenHeader(title: l('tb_symptom_screen'), subtitle: l('tb_symptom_screen_sub')),
-                  _ScreenQuestion(
-                      text: l('tb_q_cough'),
-                      value: _tbCough,
-                      onChanged: (v) => setState(() => _tbCough = v)),
-                  _ScreenQuestion(
-                      text: l('tb_q_fever'),
-                      value: _tbFever,
-                      onChanged: (v) => setState(() => _tbFever = v)),
-                  _ScreenQuestion(
-                      text: l('tb_q_night_sweats'),
-                      value: _tbNightSweats,
-                      onChanged: (v) => setState(() => _tbNightSweats = v)),
-                  _ScreenQuestion(
-                      text: l('tb_q_weight_loss'),
-                      value: _tbWeightLoss,
-                      onChanged: (v) => setState(() => _tbWeightLoss = v)),
-                  _ScreenQuestion(
-                      text: l('tb_q_chest_pain'),
-                      value: _tbChestPain,
-                      onChanged: (v) => setState(() => _tbChestPain = v)),
-                  if (_presumptiveTb)
-                    _ScreenNotice(
-                        icon: Icons.coronavirus_rounded,
-                        text: l('presumptive_tb_notice'),
-                        color: AppColors.riskCritical),
-                  const SizedBox(height: 18),
+                  // ── RBC TB symptom screen (TB or Both) ────────────────────
+                  if (_isTbScreen) ...[
+                    _ScreenHeader(
+                        title: l('tb_symptom_screen'), subtitle: l('tb_symptom_screen_sub')),
+                    _ScreenQuestion(
+                        text: l('tb_q_cough'),
+                        value: _tbCough,
+                        onChanged: (v) => setState(() => _tbCough = v)),
+                    _ScreenQuestion(
+                        text: l('tb_q_fever'),
+                        value: _tbFever,
+                        onChanged: (v) => setState(() => _tbFever = v)),
+                    _ScreenQuestion(
+                        text: l('tb_q_night_sweats'),
+                        value: _tbNightSweats,
+                        onChanged: (v) => setState(() => _tbNightSweats = v)),
+                    _ScreenQuestion(
+                        text: l('tb_q_weight_loss'),
+                        value: _tbWeightLoss,
+                        onChanged: (v) => setState(() => _tbWeightLoss = v)),
+                    _ScreenQuestion(
+                        text: l('tb_q_chest_pain'),
+                        value: _tbChestPain,
+                        onChanged: (v) => setState(() => _tbChestPain = v)),
+                    if (_presumptiveTb)
+                      _ScreenNotice(
+                          icon: Icons.coronavirus_rounded,
+                          text: l('presumptive_tb_notice'),
+                          color: AppColors.riskCritical),
+                    const SizedBox(height: 18),
+                  ],
 
                   TextFormField(
                     controller: _notesCtrl,
@@ -705,6 +728,62 @@ class _RegisterPatientScreenState
 }
 
 // ─── Structured screening helpers ─────────────────────────────────────────────
+
+class _ScreeningForSelector extends StatelessWidget {
+  final String? selected;
+  final String lang;
+  final ValueChanged<String> onSelect;
+  const _ScreeningForSelector(
+      {required this.selected, required this.lang, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    final options = <(String, String, IconData, Color)>[
+      ('HIV', AppL10n.t('screening_for_hiv', lang), Icons.bloodtype_rounded, AppColors.info),
+      ('TB', AppL10n.t('screening_for_tb', lang), Icons.coronavirus_rounded, AppColors.riskCritical),
+      ('HIV_TB_COINFECTION', AppL10n.t('screening_for_both', lang), Icons.join_inner_rounded, AppColors.primary),
+    ];
+    return Row(
+      children: options.map((opt) {
+        final (value, label, icon, color) = opt;
+        final isSelected = selected == value;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => onSelect(value),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+              decoration: BoxDecoration(
+                color: isSelected ? color.withValues(alpha: 0.12) : AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? color : AppColors.divider,
+                  width: isSelected ? 2 : 1,
+                ),
+              ),
+              child: Column(
+                children: [
+                  Icon(icon, size: 24, color: isSelected ? color : AppColors.textHint),
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? color : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
 
 class _ScreenHeader extends StatelessWidget {
   final String title;

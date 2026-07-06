@@ -38,6 +38,17 @@ class CHWRepository {
     return PriorityListResponse.fromJson(r.data as Map<String, dynamic>);
   }
 
+  Future<List<HomeVisitTaskModel>> getHomeVisitTasks() async {
+    final r = await _client.get(ApiEndpoints.homeVisitTasks);
+    return (r.data as List)
+        .map((e) => HomeVisitTaskModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> completeHomeVisitTask(String id) async {
+    await _client.put(ApiEndpoints.completeHomeVisitTask(id));
+  }
+
   /// Returns true if the visit was queued locally (no connectivity) instead
   /// of being sent immediately. A 4xx/5xx from a reachable server still
   /// throws normally — only genuine connectivity failures get queued.
@@ -55,6 +66,12 @@ class CHWRepository {
       nextVisitDate: req.nextVisitDate,
       adverseEventGrade: req.adverseEventGrade,
       referralInitiated: req.referralInitiated,
+      dotObserved: req.dotObserved,
+      tbSideEffects: req.tbSideEffects,
+      artSideEffects: req.artSideEffects,
+      homeVentilationOk: req.homeVentilationOk,
+      coughHygieneOk: req.coughHygieneOk,
+      nextDotDate: req.nextDotDate,
       clientRequestId: req.clientRequestId ?? generateUuidV4(),
     );
 

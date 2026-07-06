@@ -161,6 +161,8 @@ class _PriorityListScreenState extends ConsumerState<PriorityListScreen>
               isFiltered: _query.isNotEmpty,
               lang: lang,
             ),
+            // Triggered in-person home-visit tasks (Part 3)
+            _TriggeredVisitsSection(lang: lang),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -537,5 +539,103 @@ class _PriorityCard extends StatelessWidget {
     final diff = DateTime.now().difference(dt).inDays;
     if (diff == 0) return l('today_label');
     return '$diff${l('days_ago_short')}';
+  }
+}
+
+// ─── Triggered Home-Visit Tasks (Part 3) ──────────────────────────────────────
+
+class _TriggeredVisitsSection extends ConsumerWidget {
+  final String lang;
+  const _TriggeredVisitsSection({required this.lang});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tasksAsync = ref.watch(homeVisitTasksProvider);
+    return tasksAsync.maybeWhen(
+      data: (tasks) {
+        if (tasks.isEmpty) return const SizedBox.shrink();
+        final l = (String k) => AppL10n.t(k, lang);
+        return Container(
+          margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.riskCritical.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.riskCritical.withValues(alpha: 0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                const Icon(Icons.home_work_rounded, size: 16, color: AppColors.riskCritical),
+                const SizedBox(width: 6),
+                Text('${l('triggered_visits')} · ${tasks.length}',
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.riskCritical)),
+              ]),
+              const SizedBox(height: 2),
+              ...tasks.take(6).map((t) => _TriggeredVisitTile(task: t, lang: lang)),
+            ],
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _TriggeredVisitTile extends StatelessWidget {
+  final HomeVisitTaskModel task;
+  final String lang;
+  const _TriggeredVisitTile({required this.task, required this.lang});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = (String k) => AppL10n.t(k, lang);
+    final accent = task.isUrgent ? AppColors.riskCritical : AppColors.riskModerate;
+    return InkWell(
+      onTap: () => context.push('/chw/visit/${task.patientId}'),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(task.patientName,
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                  const SizedBox(height: 3),
+                  Row(children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(l(task.l10nKey),
+                          style: TextStyle(
+                              fontSize: 10, fontWeight: FontWeight.w700, color: accent)),
+                    ),
+                    if (task.reason != null) ...[
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(task.reason!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                      ),
+                    ],
+                  ]),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textHint),
+          ],
+        ),
+      ),
+    );
   }
 }

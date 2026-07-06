@@ -31,18 +31,27 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
 
   // State
   String _adherenceStatus = 'GOOD';
-  bool _hasSideEffects = false;
   int? _adverseEventGrade;
   bool _referralInitiated = false;
   bool _pillCountEnabled = false;
   DateTime? _nextVisitDate;
   bool _isLoading = false;
 
-  // Structured symptom screen (Gap B) — sets of checked symptom / side-effect codes.
-  final Set<String> _tbSymptoms = {};       // coughGe2w | fever | nightSweats | weightLoss | hemoptysis
-  final Set<String> _sideEffectFlags = {};  // neuropathy | jaundice | nausea | rash | dizziness
+  // Diagnosis drives which cards show (set when the patient loads).
+  String? _diagnosisType; // HIV | TB | HIV_TB_COINFECTION
+  bool get _isHiv =>
+      _diagnosisType == 'HIV' || _diagnosisType == 'HIV_TB_COINFECTION';
+  bool get _isTb =>
+      _diagnosisType == 'TB' || _diagnosisType == 'HIV_TB_COINFECTION';
 
-  bool get _presumptiveTb => _tbSymptoms.isNotEmpty;
+  // Card A — ART side effects: jaundice | neuropathy | vomiting | rash
+  final Set<String> _artSE = {};
+  // Card B — DOT + TB side effects: jaundice | vomiting | jointPain | visionChanges | rash
+  bool _dotObserved = false;
+  final Set<String> _tbSE = {};
+  bool _ventilationOk = false;
+  bool _coughHygieneOk = false;
+  DateTime? _nextDotDate;
 
   void _toggle(Set<String> set, String code, bool on) =>
       setState(() => on ? set.add(code) : set.remove(code));
@@ -80,21 +89,37 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
     if (picked != null) setState(() => _nextVisitDate = picked);
   }
 
+  Future<void> _pickNextDotDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 30)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(primary: AppColors.primary),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _nextDotDate = picked);
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final hasObservation = _tbSymptoms.isNotEmpty ||
-        _sideEffectFlags.isNotEmpty ||
-        _symptomsCtrl.text.trim().isNotEmpty ||
-        (_hasSideEffects && _sideEffectsCtrl.text.trim().isNotEmpty) ||
+    final anySideEffect = _artSE.isNotEmpty || _tbSE.isNotEmpty;
+    final hasObservation = anySideEffect ||
+        _dotObserved ||
         _notesCtrl.text.trim().isNotEmpty ||
-        (_pillCountEnabled && _pillRecordedCtrl.text.trim().isNotEmpty) ||
-        (_hasSideEffects && _adverseEventGrade != null);
+        (_isHiv && _pillCountEnabled && _pillRecordedCtrl.text.trim().isNotEmpty) ||
+        _adverseEventGrade != null ||
+        _nextDotDate != null;
     if (!hasObservation) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'You must record at least one clinical observation before saving the visit.',
+            'Record at least one observation — DOT, a side effect, a pill count, or a note.',
           ),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
@@ -109,34 +134,42 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
         patientId: widget.patientId,
         visitDate: AppDateUtils.nowForServer(),
         adherenceStatus: _adherenceStatus,
-        pillCountRecorded:
-            _pillCountEnabled ? int.tryParse(_pillRecordedCtrl.text) : null,
-        pillCountExpected:
-            _pillCountEnabled ? int.tryParse(_pillExpectedCtrl.text) : null,
-        symptoms: SymptomScreen(
-          coughGe2w: _tbSymptoms.contains('coughGe2w'),
-          fever: _tbSymptoms.contains('fever'),
-          nightSweats: _tbSymptoms.contains('nightSweats'),
-          weightLoss: _tbSymptoms.contains('weightLoss'),
-          hemoptysis: _tbSymptoms.contains('hemoptysis'),
-          neuropathy: _hasSideEffects && _sideEffectFlags.contains('neuropathy'),
-          jaundice: _hasSideEffects && _sideEffectFlags.contains('jaundice'),
-          nausea: _hasSideEffects && _sideEffectFlags.contains('nausea'),
-          rash: _hasSideEffects && _sideEffectFlags.contains('rash'),
-          dizziness: _hasSideEffects && _sideEffectFlags.contains('dizziness'),
-        ),
-        symptomsReported: _symptomsCtrl.text.trim().isEmpty
-            ? null
-            : _symptomsCtrl.text.trim(),
-        sideEffectsReported: _hasSideEffects && _sideEffectsCtrl.text.isNotEmpty
-            ? _sideEffectsCtrl.text.trim()
+        // Card A (HIV / ART)
+        pillCountRecorded: (_isHiv && _pillCountEnabled)
+            ? int.tryParse(_pillRecordedCtrl.text)
             : null,
+        pillCountExpected: (_isHiv && _pillCountEnabled)
+            ? int.tryParse(_pillExpectedCtrl.text)
+            : null,
+        artSideEffects: _isHiv
+            ? {
+                'jaundice': _artSE.contains('jaundice'),
+                'neuropathy': _artSE.contains('neuropathy'),
+                'vomiting': _artSE.contains('vomiting'),
+                'rash': _artSE.contains('rash'),
+              }
+            : null,
+        // Card B (TB / DOT)
+        dotObserved: _isTb ? _dotObserved : null,
+        tbSideEffects: _isTb
+            ? {
+                'jaundice': _tbSE.contains('jaundice'),
+                'vomiting': _tbSE.contains('vomiting'),
+                'jointPain': _tbSE.contains('jointPain'),
+                'visionChanges': _tbSE.contains('visionChanges'),
+                'rash': _tbSE.contains('rash'),
+              }
+            : null,
+        homeVentilationOk: _isTb ? _ventilationOk : null,
+        coughHygieneOk: _isTb ? _coughHygieneOk : null,
+        nextDotDate: _isTb ? _nextDotDate : null,
         psychosocialNotes: _notesCtrl.text.trim().isEmpty
             ? null
             : _notesCtrl.text.trim(),
         nextVisitDate: _nextVisitDate,
-        adverseEventGrade: _hasSideEffects ? _adverseEventGrade : null,
-        referralInitiated: (_hasSideEffects && _adverseEventGrade != null && _adverseEventGrade! >= 3)
+        // Adverse-event grade applies to either card (severe ART or TB reactions).
+        adverseEventGrade: _adverseEventGrade,
+        referralInitiated: (_adverseEventGrade != null && _adverseEventGrade! >= 3)
             ? _referralInitiated
             : null,
       );
@@ -192,7 +225,10 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
         loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.primary)),
         error: (_, __) => _buildForm(patientName: null, lang: lang, l: l),
-        data: (p) => _buildForm(patientName: p.fullName, lang: lang, l: l),
+        data: (p) {
+          _diagnosisType = p.diagnosisType;
+          return _buildForm(patientName: p.fullName, lang: lang, l: l);
+        },
       ),
     );
   }
@@ -226,192 +262,153 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
               ),
               const SizedBox(height: 24),
 
-              // ── Pill count ────────────────────────────────────────────────
-              _SectionTitle(
-                  title: l('pill_count'),
-                  subtitle: l('pill_count_desc')),
-              const SizedBox(height: 10),
-              _ToggleCard(
-                title: l('enable_pill_count'),
-                subtitle: l('record_pill_count_subtitle'),
-                value: _pillCountEnabled,
-                onChanged: (v) {
-                  setState(() {
+              // ══ Card A — HIV / ART monitoring ═════════════════════════════
+              if (_isHiv) ...[
+                _CardHeader(
+                    icon: Icons.bloodtype_rounded,
+                    title: l('card_art_title'),
+                    color: AppColors.info),
+                const SizedBox(height: 12),
+                _SectionTitle(
+                    title: l('pill_count'), subtitle: l('pill_count_desc')),
+                const SizedBox(height: 10),
+                _ToggleCard(
+                  title: l('enable_pill_count'),
+                  subtitle: l('record_pill_count_subtitle'),
+                  value: _pillCountEnabled,
+                  onChanged: (v) => setState(() {
                     _pillCountEnabled = v;
                     if (!v) {
                       _pillRecordedCtrl.clear();
                       _pillExpectedCtrl.clear();
                     }
-                  });
-                },
-                activeColor: AppColors.primary,
-              ),
-              if (_pillCountEnabled) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _pillRecordedCtrl,
-                        keyboardType: TextInputType.number,
-                        validator: (v) => _pillCountEnabled
-                            ? Validators.positiveInt(v, l('pills_found'))
-                            : null,
-                        decoration: InputDecoration(
-                          labelText: l('pills_found'),
-                          suffixText: l('unit_pills'),
-                          prefixIcon: const Icon(Icons.medication_rounded, size: 18),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _pillExpectedCtrl,
-                        keyboardType: TextInputType.number,
-                        validator: (v) => _pillCountEnabled
-                            ? Validators.positiveInt(v, l('pills_expected'))
-                            : null,
-                        decoration: InputDecoration(
-                          labelText: l('pills_expected'),
-                          suffixText: l('unit_pills'),
-                          prefixIcon:
-                              const Icon(Icons.format_list_numbered_rounded, size: 18),
-                        ),
-                      ),
-                    ),
-                  ],
+                  }),
+                  activeColor: AppColors.primary,
                 ),
-                if (_pillRecordedCtrl.text.isNotEmpty &&
-                    _pillExpectedCtrl.text.isNotEmpty)
-                  _PillDiscrepancyHint(
-                    recorded: int.tryParse(_pillRecordedCtrl.text),
-                    expected: int.tryParse(_pillExpectedCtrl.text),
-                    lang: lang,
+                if (_pillCountEnabled) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _pillRecordedCtrl,
+                          keyboardType: TextInputType.number,
+                          validator: (v) => (_isHiv && _pillCountEnabled)
+                              ? Validators.positiveInt(v, l('pills_found'))
+                              : null,
+                          decoration: InputDecoration(
+                            labelText: l('pills_found'),
+                            suffixText: l('unit_pills'),
+                            prefixIcon: const Icon(Icons.medication_rounded, size: 18),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _pillExpectedCtrl,
+                          keyboardType: TextInputType.number,
+                          validator: (v) => (_isHiv && _pillCountEnabled)
+                              ? Validators.positiveInt(v, l('pills_expected'))
+                              : null,
+                          decoration: InputDecoration(
+                            labelText: l('pills_expected'),
+                            suffixText: l('unit_pills'),
+                            prefixIcon: const Icon(
+                                Icons.format_list_numbered_rounded, size: 18),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  if (_pillRecordedCtrl.text.isNotEmpty &&
+                      _pillExpectedCtrl.text.isNotEmpty)
+                    _PillDiscrepancyHint(
+                      recorded: int.tryParse(_pillRecordedCtrl.text),
+                      expected: int.tryParse(_pillExpectedCtrl.text),
+                      lang: lang,
+                    ),
+                ],
+                const SizedBox(height: 16),
+                _SectionTitle(
+                    title: l('art_side_effects'), subtitle: l('art_side_effects_sub')),
+                const SizedBox(height: 8),
+                _ChecklistTile(label: l('se_jaundice'), value: _artSE.contains('jaundice'), accent: AppColors.riskCritical, onChanged: (v) => _toggle(_artSE, 'jaundice', v)),
+                _ChecklistTile(label: l('se_neuropathy'), value: _artSE.contains('neuropathy'), accent: AppColors.riskModerate, onChanged: (v) => _toggle(_artSE, 'neuropathy', v)),
+                _ChecklistTile(label: l('se_vomiting'), value: _artSE.contains('vomiting'), accent: AppColors.riskModerate, onChanged: (v) => _toggle(_artSE, 'vomiting', v)),
+                _ChecklistTile(label: l('se_rash'), value: _artSE.contains('rash'), accent: AppColors.riskModerate, onChanged: (v) => _toggle(_artSE, 'rash', v)),
+                const SizedBox(height: 24),
               ],
-              const SizedBox(height: 24),
 
-              // ── TB symptom screen (structured checklist) ──────────────────
-              _SectionTitle(
-                  title: l('tb_symptom_screen'),
-                  subtitle: l('tb_symptom_screen_sub')),
-              const SizedBox(height: 10),
-              _ChecklistTile(
-                  label: l('sym_cough'),
-                  value: _tbSymptoms.contains('coughGe2w'),
-                  accent: AppColors.riskHigh,
-                  onChanged: (v) => _toggle(_tbSymptoms, 'coughGe2w', v)),
-              _ChecklistTile(
-                  label: l('sym_fever'),
-                  value: _tbSymptoms.contains('fever'),
-                  accent: AppColors.riskHigh,
-                  onChanged: (v) => _toggle(_tbSymptoms, 'fever', v)),
-              _ChecklistTile(
-                  label: l('sym_night_sweats'),
-                  value: _tbSymptoms.contains('nightSweats'),
-                  accent: AppColors.riskHigh,
-                  onChanged: (v) => _toggle(_tbSymptoms, 'nightSweats', v)),
-              _ChecklistTile(
-                  label: l('sym_weight_loss'),
-                  value: _tbSymptoms.contains('weightLoss'),
-                  accent: AppColors.riskHigh,
-                  onChanged: (v) => _toggle(_tbSymptoms, 'weightLoss', v)),
-              _ChecklistTile(
-                  label: l('sym_hemoptysis'),
-                  value: _tbSymptoms.contains('hemoptysis'),
-                  accent: AppColors.riskCritical,
-                  onChanged: (v) => _toggle(_tbSymptoms, 'hemoptysis', v)),
-              if (_presumptiveTb) _PresumptiveTbBanner(lang: lang),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _symptomsCtrl,
-                maxLines: 2,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  labelText: l('other_symptoms_optional'),
-                  hintText: l('symptoms_hint'),
-                  prefixIcon:
-                      const Icon(Icons.sick_rounded, size: 18),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // ── Side effects ──────────────────────────────────────────────
-              _SectionTitle(
-                  title: l('side_effects'),
-                  subtitle: l('side_effects_subtitle')),
-              const SizedBox(height: 10),
-              _ToggleCard(
-                title: l('side_effects_reported'),
-                subtitle: l('side_effects_reported_sub'),
-                value: _hasSideEffects,
-                onChanged: (v) => setState(() {
-                  _hasSideEffects = v;
-                  if (!v) {
-                    _sideEffectsCtrl.clear();
-                    _sideEffectFlags.clear();
-                    _adverseEventGrade = null;
-                    _referralInitiated = false;
-                  }
-                }),
-                activeColor: AppColors.riskHigh,
-              ),
-              if (_hasSideEffects) ...[
-                const SizedBox(height: 12),
-                Text(l('select_side_effects'),
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textSecondary)),
+              // ══ Card B — TB / Directly Observed Therapy ═══════════════════
+              if (_isTb) ...[
+                _CardHeader(
+                    icon: Icons.coronavirus_rounded,
+                    title: l('card_dot_title'),
+                    color: AppColors.riskCritical),
                 const SizedBox(height: 6),
-                _ChecklistTile(
-                    label: l('se_neuropathy'),
-                    value: _sideEffectFlags.contains('neuropathy'),
-                    accent: AppColors.riskModerate,
-                    onChanged: (v) => _toggle(_sideEffectFlags, 'neuropathy', v)),
-                _ChecklistTile(
-                    label: l('se_jaundice'),
-                    value: _sideEffectFlags.contains('jaundice'),
-                    accent: AppColors.riskCritical,
-                    onChanged: (v) => _toggle(_sideEffectFlags, 'jaundice', v)),
-                _ChecklistTile(
-                    label: l('se_nausea'),
-                    value: _sideEffectFlags.contains('nausea'),
-                    accent: AppColors.riskModerate,
-                    onChanged: (v) => _toggle(_sideEffectFlags, 'nausea', v)),
-                _ChecklistTile(
-                    label: l('se_rash'),
-                    value: _sideEffectFlags.contains('rash'),
-                    accent: AppColors.riskModerate,
-                    onChanged: (v) => _toggle(_sideEffectFlags, 'rash', v)),
-                _ChecklistTile(
-                    label: l('se_dizziness'),
-                    value: _sideEffectFlags.contains('dizziness'),
-                    accent: AppColors.riskModerate,
-                    onChanged: (v) => _toggle(_sideEffectFlags, 'dizziness', v)),
+                Text(l('dot_regulatory_note'),
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.textHint, height: 1.4)),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _sideEffectsCtrl,
-                  maxLines: 2,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: InputDecoration(
-                    labelText: l('other_side_effects_optional'),
-                    hintText: l('side_effects_hint'),
-                    prefixIcon: const Icon(Icons.warning_amber_rounded, size: 18),
-                  ),
+                _ToggleCard(
+                  title: l('dot_observed'),
+                  subtitle: l('dot_observed_sub'),
+                  value: _dotObserved,
+                  onChanged: (v) => setState(() => _dotObserved = v),
+                  activeColor: AppColors.riskLow,
                 ),
-                const SizedBox(height: 12),
-                Text(l('adverse_event_grade'),
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text(l('adverse_event_grade_hint'),
-                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                const SizedBox(height: 16),
+                _SectionTitle(
+                    title: l('tb_side_effects'), subtitle: l('tb_side_effects_sub')),
+                const SizedBox(height: 8),
+                _ChecklistTile(label: l('se_jaundice'), value: _tbSE.contains('jaundice'), accent: AppColors.riskCritical, onChanged: (v) => _toggle(_tbSE, 'jaundice', v)),
+                _ChecklistTile(label: l('se_vomiting'), value: _tbSE.contains('vomiting'), accent: AppColors.riskModerate, onChanged: (v) => _toggle(_tbSE, 'vomiting', v)),
+                _ChecklistTile(label: l('se_joint_pain'), value: _tbSE.contains('jointPain'), accent: AppColors.riskModerate, onChanged: (v) => _toggle(_tbSE, 'jointPain', v)),
+                _ChecklistTile(label: l('se_vision_changes'), value: _tbSE.contains('visionChanges'), accent: AppColors.riskCritical, onChanged: (v) => _toggle(_tbSE, 'visionChanges', v)),
+                _ChecklistTile(label: l('se_rash'), value: _tbSE.contains('rash'), accent: AppColors.riskModerate, onChanged: (v) => _toggle(_tbSE, 'rash', v)),
+                const SizedBox(height: 16),
+                _SectionTitle(
+                    title: l('infection_control'), subtitle: l('infection_control_sub')),
+                const SizedBox(height: 8),
+                _ToggleCard(
+                  title: l('home_ventilation_ok'),
+                  subtitle: l('home_ventilation_sub'),
+                  value: _ventilationOk,
+                  onChanged: (v) => setState(() => _ventilationOk = v),
+                  activeColor: AppColors.riskLow,
+                ),
+                const SizedBox(height: 8),
+                _ToggleCard(
+                  title: l('cough_hygiene_ok'),
+                  subtitle: l('cough_hygiene_sub'),
+                  value: _coughHygieneOk,
+                  onChanged: (v) => setState(() => _coughHygieneOk = v),
+                  activeColor: AppColors.riskLow,
+                ),
+                const SizedBox(height: 16),
+                _SectionTitle(title: l('next_dot'), subtitle: l('next_dot_sub')),
+                const SizedBox(height: 10),
+                _NextVisitPicker(
+                  selected: _nextDotDate,
+                  onTap: _pickNextDotDate,
+                  onClear: () => setState(() => _nextDotDate = null),
+                  lang: lang,
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // ══ Adverse-event severity (shown when any side effect flagged) ═
+              if (_artSE.isNotEmpty || _tbSE.isNotEmpty) ...[
+                _SectionTitle(
+                    title: l('adverse_event_grade'),
+                    subtitle: l('adverse_event_grade_hint')),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   children: [1, 2, 3, 4].map((grade) {
                     final selected = _adverseEventGrade == grade;
-                    final severe = grade >= 3;
-                    final color = severe ? AppColors.riskCritical : AppColors.riskModerate;
+                    final color = grade >= 3 ? AppColors.riskCritical : AppColors.riskModerate;
                     return ChoiceChip(
                       label: Text('${l('grade_label')} $grade'),
                       selected: selected,
@@ -436,17 +433,14 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
                     padding: const EdgeInsets.only(top: 8),
                     child: Row(
                       children: [
-                        const Icon(Icons.campaign_rounded,
-                            size: 16, color: AppColors.riskCritical),
+                        const Icon(Icons.campaign_rounded, size: 16, color: AppColors.riskCritical),
                         const SizedBox(width: 6),
                         Expanded(
-                          child: Text(
-                            l('grade_severe_alert_notice'),
-                            style: const TextStyle(
-                                fontSize: 11.5,
-                                color: AppColors.riskCritical,
-                                fontWeight: FontWeight.w600),
-                          ),
+                          child: Text(l('grade_severe_alert_notice'),
+                              style: const TextStyle(
+                                  fontSize: 11.5,
+                                  color: AppColors.riskCritical,
+                                  fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ),
@@ -459,17 +453,9 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
                     onChanged: (v) => setState(() => _referralInitiated = v),
                     activeColor: AppColors.riskCritical,
                   ),
-                  if (!_referralInitiated)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6, left: 4),
-                      child: Text(
-                        l('referral_initiated_warning'),
-                        style: const TextStyle(fontSize: 11, color: AppColors.textHint),
-                      ),
-                    ),
                 ],
+                const SizedBox(height: 24),
               ],
-              const SizedBox(height: 24),
 
               // ── Psychosocial notes ────────────────────────────────────────
               _SectionTitle(
@@ -845,32 +831,33 @@ class _ChecklistTile extends StatelessWidget {
 
 // ─── Presumptive TB Banner ────────────────────────────────────────────────────
 
-class _PresumptiveTbBanner extends StatelessWidget {
-  final String lang;
-  const _PresumptiveTbBanner({required this.lang});
+class _CardHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Color color;
+  const _CardHeader(
+      {required this.icon, required this.title, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(top: 4, bottom: 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.riskCritical.withValues(alpha: 0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.riskCritical.withValues(alpha: 0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.coronavirus_rounded,
-              size: 18, color: AppColors.riskCritical),
-          const SizedBox(width: 8),
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
-              AppL10n.t('presumptive_tb_banner', lang),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.riskCritical,
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: color,
               ),
             ),
           ),

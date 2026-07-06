@@ -240,6 +240,65 @@ class PriorityPatient {
       );
 }
 
+// ─── Triggered Home-Visit Task (Part 3) ───────────────────────────────────────
+
+class HomeVisitTaskModel {
+  final String id;
+  final String patientId;
+  final String patientName;
+  final String patientCode;
+  final String? village;
+  final String? diagnosisType;
+  final String triggerType;
+  final String? reason;
+  final String status;
+  final DateTime createdAt;
+
+  const HomeVisitTaskModel({
+    required this.id,
+    required this.patientId,
+    required this.patientName,
+    required this.patientCode,
+    this.village,
+    this.diagnosisType,
+    required this.triggerType,
+    this.reason,
+    required this.status,
+    required this.createdAt,
+  });
+
+  factory HomeVisitTaskModel.fromJson(Map<String, dynamic> json) => HomeVisitTaskModel(
+        id: json['id'] as String,
+        patientId: json['patientId'] as String? ?? '',
+        patientName: json['patientName'] as String? ?? '',
+        patientCode: json['patientCode'] as String? ?? '',
+        village: json['village'] as String?,
+        diagnosisType: json['diagnosisType'] as String?,
+        triggerType: json['triggerType'] as String? ?? '',
+        reason: json['reason'] as String?,
+        status: json['status'] as String? ?? 'OPEN',
+        createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+      );
+
+  /// Human label for the trigger reason, resolved by the l10n key `hvt_<code>`.
+  String get l10nKey {
+    switch (triggerType) {
+      case 'MISSED_DOSES':       return 'hvt_missed_doses';
+      case 'SIDE_EFFECT':        return 'hvt_side_effect';
+      case 'IIT_ESCALATED':      return 'hvt_iit_escalated';
+      case 'HIGH_RISK':          return 'hvt_high_risk';
+      case 'PERIODIC_REVIEW':    return 'hvt_periodic_review';
+      case 'INITIAL_ASSESSMENT': return 'hvt_initial_assessment';
+      default:                   return 'hvt_generic';
+    }
+  }
+
+  bool get isUrgent =>
+      triggerType == 'SIDE_EFFECT' ||
+      triggerType == 'IIT_ESCALATED' ||
+      triggerType == 'HIGH_RISK';
+}
+
 /// Structured symptom-screen flags (Gap B) shared by the record & update
 /// home-visit requests. Booleans default to false; the server derives the
 /// presumptive-TB flag from the TB cardinal symptoms.
@@ -304,6 +363,13 @@ class HomeVisitRequest {
   final DateTime? nextVisitDate;
   final int? adverseEventGrade;
   final bool? referralInitiated;
+  // ── Differentiated DOT model (Part 1). Gated server-side by diagnosisType. ──
+  final bool? dotObserved;                    // Card B (TB): observed swallow today
+  final Map<String, bool>? tbSideEffects;     // { jaundice, vomiting, jointPain, visionChanges, rash }
+  final Map<String, bool>? artSideEffects;    // { jaundice, neuropathy, vomiting, rash }
+  final bool? homeVentilationOk;
+  final bool? coughHygieneOk;
+  final DateTime? nextDotDate;
   final String? clientRequestId;
 
   const HomeVisitRequest({
@@ -319,6 +385,12 @@ class HomeVisitRequest {
     this.nextVisitDate,
     this.adverseEventGrade,
     this.referralInitiated,
+    this.dotObserved,
+    this.tbSideEffects,
+    this.artSideEffects,
+    this.homeVentilationOk,
+    this.coughHygieneOk,
+    this.nextDotDate,
     this.clientRequestId,
   });
 
@@ -339,6 +411,13 @@ class HomeVisitRequest {
           'nextVisitDate': nextVisitDate!.toIso8601String(),
         if (adverseEventGrade != null) 'adverseEventGrade': adverseEventGrade,
         if (referralInitiated != null) 'referralInitiated': referralInitiated,
+        if (dotObserved != null) 'dotObserved': dotObserved,
+        if (tbSideEffects != null) 'tbSideEffects': tbSideEffects,
+        if (artSideEffects != null) 'artSideEffects': artSideEffects,
+        if (homeVentilationOk != null) 'homeVentilationOk': homeVentilationOk,
+        if (coughHygieneOk != null) 'coughHygieneOk': coughHygieneOk,
+        if (nextDotDate != null)
+          'nextDotDate': nextDotDate!.toIso8601String().split('T')[0],
         if (clientRequestId != null) 'clientRequestId': clientRequestId,
       };
 }
@@ -397,8 +476,8 @@ class RegisterPatientRequest {
   final String district;
   final DateTime? dateOfBirth;
   final String sex;
-  final String hivStatus;
-  final String tbStatus;
+  /// TB | HIV | HIV_TB_COINFECTION — from the single "screening for" selector.
+  final String suspectedCondition;
   final bool hasSmartphone;
   final String? screeningNotes;
   final String? locationGeohash;
@@ -428,8 +507,7 @@ class RegisterPatientRequest {
     required this.district,
     this.dateOfBirth,
     required this.sex,
-    required this.hivStatus,
-    required this.tbStatus,
+    required this.suspectedCondition,
     this.hasSmartphone = false,
     this.screeningNotes,
     this.locationGeohash,
@@ -457,15 +535,6 @@ class RegisterPatientRequest {
   bool get hivTestingReferral =>
       hivRiskNeverTested || hivRiskPartnerPositive || hivRiskUnprotectedSex ||
       hivRiskStiTreatment || hivRiskRecurrentIllness;
-
-  /// Derives suspectedCondition from hivStatus + tbStatus for ScreenPatientRequest.
-  String get suspectedCondition {
-    final hiv = hivStatus.toUpperCase() == 'POSITIVE';
-    final tb  = tbStatus.toUpperCase() == 'ACTIVE' || tbStatus.toUpperCase() == 'SUSPECTED';
-    if (hiv && tb) return 'HIV_TB_COINFECTION';
-    if (hiv)       return 'HIV';
-    return 'TB';
-  }
 
   Map<String, dynamic> toJson() => {
         'fullName': fullName,
