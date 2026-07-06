@@ -38,6 +38,15 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
   DateTime? _nextVisitDate;
   bool _isLoading = false;
 
+  // Structured symptom screen (Gap B) — sets of checked symptom / side-effect codes.
+  final Set<String> _tbSymptoms = {};       // coughGe2w | fever | nightSweats | weightLoss | hemoptysis
+  final Set<String> _sideEffectFlags = {};  // neuropathy | jaundice | nausea | rash | dizziness
+
+  bool get _presumptiveTb => _tbSymptoms.isNotEmpty;
+
+  void _toggle(Set<String> set, String code, bool on) =>
+      setState(() => on ? set.add(code) : set.remove(code));
+
   static const _adherenceOptions = [
     ('GOOD', 'adherence_good', Icons.check_circle_rounded, AppColors.riskLow),
     ('PARTIAL', 'adherence_partial', Icons.warning_rounded, AppColors.riskModerate),
@@ -74,9 +83,13 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final hasObservation = _symptomsCtrl.text.trim().isNotEmpty ||
+    final hasObservation = _tbSymptoms.isNotEmpty ||
+        _sideEffectFlags.isNotEmpty ||
+        _symptomsCtrl.text.trim().isNotEmpty ||
         (_hasSideEffects && _sideEffectsCtrl.text.trim().isNotEmpty) ||
-        _notesCtrl.text.trim().isNotEmpty;
+        _notesCtrl.text.trim().isNotEmpty ||
+        (_pillCountEnabled && _pillRecordedCtrl.text.trim().isNotEmpty) ||
+        (_hasSideEffects && _adverseEventGrade != null);
     if (!hasObservation) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -100,6 +113,18 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
             _pillCountEnabled ? int.tryParse(_pillRecordedCtrl.text) : null,
         pillCountExpected:
             _pillCountEnabled ? int.tryParse(_pillExpectedCtrl.text) : null,
+        symptoms: SymptomScreen(
+          coughGe2w: _tbSymptoms.contains('coughGe2w'),
+          fever: _tbSymptoms.contains('fever'),
+          nightSweats: _tbSymptoms.contains('nightSweats'),
+          weightLoss: _tbSymptoms.contains('weightLoss'),
+          hemoptysis: _tbSymptoms.contains('hemoptysis'),
+          neuropathy: _hasSideEffects && _sideEffectFlags.contains('neuropathy'),
+          jaundice: _hasSideEffects && _sideEffectFlags.contains('jaundice'),
+          nausea: _hasSideEffects && _sideEffectFlags.contains('nausea'),
+          rash: _hasSideEffects && _sideEffectFlags.contains('rash'),
+          dizziness: _hasSideEffects && _sideEffectFlags.contains('dizziness'),
+        ),
         symptomsReported: _symptomsCtrl.text.trim().isEmpty
             ? null
             : _symptomsCtrl.text.trim(),
@@ -267,17 +292,44 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
               ],
               const SizedBox(height: 24),
 
-              // ── Symptoms ──────────────────────────────────────────────────
+              // ── TB symptom screen (structured checklist) ──────────────────
               _SectionTitle(
-                  title: l('symptoms'),
-                  subtitle: l('symptoms_subtitle')),
+                  title: l('tb_symptom_screen'),
+                  subtitle: l('tb_symptom_screen_sub')),
               const SizedBox(height: 10),
+              _ChecklistTile(
+                  label: l('sym_cough'),
+                  value: _tbSymptoms.contains('coughGe2w'),
+                  accent: AppColors.riskHigh,
+                  onChanged: (v) => _toggle(_tbSymptoms, 'coughGe2w', v)),
+              _ChecklistTile(
+                  label: l('sym_fever'),
+                  value: _tbSymptoms.contains('fever'),
+                  accent: AppColors.riskHigh,
+                  onChanged: (v) => _toggle(_tbSymptoms, 'fever', v)),
+              _ChecklistTile(
+                  label: l('sym_night_sweats'),
+                  value: _tbSymptoms.contains('nightSweats'),
+                  accent: AppColors.riskHigh,
+                  onChanged: (v) => _toggle(_tbSymptoms, 'nightSweats', v)),
+              _ChecklistTile(
+                  label: l('sym_weight_loss'),
+                  value: _tbSymptoms.contains('weightLoss'),
+                  accent: AppColors.riskHigh,
+                  onChanged: (v) => _toggle(_tbSymptoms, 'weightLoss', v)),
+              _ChecklistTile(
+                  label: l('sym_hemoptysis'),
+                  value: _tbSymptoms.contains('hemoptysis'),
+                  accent: AppColors.riskCritical,
+                  onChanged: (v) => _toggle(_tbSymptoms, 'hemoptysis', v)),
+              if (_presumptiveTb) _PresumptiveTbBanner(lang: lang),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _symptomsCtrl,
                 maxLines: 2,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
-                  labelText: '${l('symptoms')} (${l('optional')})',
+                  labelText: l('other_symptoms_optional'),
                   hintText: l('symptoms_hint'),
                   prefixIcon:
                       const Icon(Icons.sick_rounded, size: 18),
@@ -298,6 +350,7 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
                   _hasSideEffects = v;
                   if (!v) {
                     _sideEffectsCtrl.clear();
+                    _sideEffectFlags.clear();
                     _adverseEventGrade = null;
                     _referralInitiated = false;
                   }
@@ -306,15 +359,42 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
               ),
               if (_hasSideEffects) ...[
                 const SizedBox(height: 12),
+                Text(l('select_side_effects'),
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary)),
+                const SizedBox(height: 6),
+                _ChecklistTile(
+                    label: l('se_neuropathy'),
+                    value: _sideEffectFlags.contains('neuropathy'),
+                    accent: AppColors.riskModerate,
+                    onChanged: (v) => _toggle(_sideEffectFlags, 'neuropathy', v)),
+                _ChecklistTile(
+                    label: l('se_jaundice'),
+                    value: _sideEffectFlags.contains('jaundice'),
+                    accent: AppColors.riskCritical,
+                    onChanged: (v) => _toggle(_sideEffectFlags, 'jaundice', v)),
+                _ChecklistTile(
+                    label: l('se_nausea'),
+                    value: _sideEffectFlags.contains('nausea'),
+                    accent: AppColors.riskModerate,
+                    onChanged: (v) => _toggle(_sideEffectFlags, 'nausea', v)),
+                _ChecklistTile(
+                    label: l('se_rash'),
+                    value: _sideEffectFlags.contains('rash'),
+                    accent: AppColors.riskModerate,
+                    onChanged: (v) => _toggle(_sideEffectFlags, 'rash', v)),
+                _ChecklistTile(
+                    label: l('se_dizziness'),
+                    value: _sideEffectFlags.contains('dizziness'),
+                    accent: AppColors.riskModerate,
+                    onChanged: (v) => _toggle(_sideEffectFlags, 'dizziness', v)),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _sideEffectsCtrl,
                   maxLines: 2,
                   textCapitalization: TextCapitalization.sentences,
-                  validator: (v) => _hasSideEffects
-                      ? Validators.required(v, l('describe_side_effects'))
-                      : null,
                   decoration: InputDecoration(
-                    labelText: l('describe_side_effects'),
+                    labelText: l('other_side_effects_optional'),
                     hintText: l('side_effects_hint'),
                     prefixIcon: const Icon(Icons.warning_amber_rounded, size: 18),
                   ),
@@ -703,6 +783,97 @@ class _PillDiscrepancyHint extends StatelessWidget {
           Icon(icon, size: 14, color: color),
           const SizedBox(width: 6),
           Text(msg, style: TextStyle(fontSize: 12, color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Checklist Tile (structured symptom / side-effect) ────────────────────────
+
+class _ChecklistTile extends StatelessWidget {
+  final String label;
+  final bool value;
+  final Color accent;
+  final ValueChanged<bool> onChanged;
+  const _ChecklistTile({
+    required this.label,
+    required this.value,
+    required this.accent,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () => onChanged(!value),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: value ? accent.withValues(alpha: 0.06) : AppColors.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: value ? accent.withValues(alpha: 0.5) : AppColors.divider,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              value ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+              size: 22,
+              color: value ? accent : AppColors.textHint,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: value ? FontWeight.w600 : FontWeight.w400,
+                  color: value ? AppColors.textPrimary : AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Presumptive TB Banner ────────────────────────────────────────────────────
+
+class _PresumptiveTbBanner extends StatelessWidget {
+  final String lang;
+  const _PresumptiveTbBanner({required this.lang});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 4, bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.riskCritical.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.riskCritical.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.coronavirus_rounded,
+              size: 18, color: AppColors.riskCritical),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              AppL10n.t('presumptive_tb_banner', lang),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.riskCritical,
+              ),
+            ),
+          ),
         ],
       ),
     );

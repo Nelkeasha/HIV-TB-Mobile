@@ -240,12 +240,64 @@ class PriorityPatient {
       );
 }
 
+/// Structured symptom-screen flags (Gap B) shared by the record & update
+/// home-visit requests. Booleans default to false; the server derives the
+/// presumptive-TB flag from the TB cardinal symptoms.
+class SymptomScreen {
+  final bool coughGe2w;
+  final bool fever;
+  final bool nightSweats;
+  final bool weightLoss;
+  final bool hemoptysis;
+  final bool neuropathy;
+  final bool jaundice;
+  final bool nausea;
+  final bool rash;
+  final bool dizziness;
+
+  const SymptomScreen({
+    this.coughGe2w = false,
+    this.fever = false,
+    this.nightSweats = false,
+    this.weightLoss = false,
+    this.hemoptysis = false,
+    this.neuropathy = false,
+    this.jaundice = false,
+    this.nausea = false,
+    this.rash = false,
+    this.dizziness = false,
+  });
+
+  /// WHO four-symptom TB screen (+ hemoptysis): any positive → presumptive TB.
+  bool get isPresumptiveTb =>
+      coughGe2w || fever || nightSweats || weightLoss || hemoptysis;
+
+  bool get anyChecked =>
+      isPresumptiveTb || neuropathy || jaundice || nausea || rash || dizziness;
+
+  bool get anySideEffect => neuropathy || jaundice || nausea || rash || dizziness;
+
+  Map<String, dynamic> toJson() => {
+        'symptomCoughGe2w': coughGe2w,
+        'symptomFever': fever,
+        'symptomNightSweats': nightSweats,
+        'symptomWeightLoss': weightLoss,
+        'symptomHemoptysis': hemoptysis,
+        'sideEffectNeuropathy': neuropathy,
+        'sideEffectJaundice': jaundice,
+        'sideEffectNausea': nausea,
+        'sideEffectRash': rash,
+        'sideEffectDizziness': dizziness,
+      };
+}
+
 class HomeVisitRequest {
   final String patientId;
   final DateTime visitDate;
   final String adherenceStatus;
   final int? pillCountRecorded;
   final int? pillCountExpected;
+  final SymptomScreen symptoms;
   final String? symptomsReported;
   final String? sideEffectsReported;
   final String? psychosocialNotes;
@@ -260,6 +312,7 @@ class HomeVisitRequest {
     required this.adherenceStatus,
     this.pillCountRecorded,
     this.pillCountExpected,
+    this.symptoms = const SymptomScreen(),
     this.symptomsReported,
     this.sideEffectsReported,
     this.psychosocialNotes,
@@ -275,6 +328,7 @@ class HomeVisitRequest {
         'adherenceStatus': adherenceStatus,
         if (pillCountRecorded != null) 'pillCountRecorded': pillCountRecorded,
         if (pillCountExpected != null) 'pillCountExpected': pillCountExpected,
+        ...symptoms.toJson(),
         if (symptomsReported != null && symptomsReported!.isNotEmpty)
           'symptomsReported': symptomsReported,
         if (sideEffectsReported != null && sideEffectsReported!.isNotEmpty)
@@ -351,6 +405,21 @@ class RegisterPatientRequest {
   final bool consentGiven;
   final String consentVersion;
 
+  // ── RBC structured TB symptom screen (any → presumptive TB) ──
+  final bool tbSymptomCough;
+  final bool tbSymptomFever;
+  final bool tbSymptomNightSweats;
+  final bool tbSymptomWeightLoss;
+  final bool tbSymptomChestPain;
+
+  // ── Community HIV testing-eligibility risk screen (any → testing referral) ──
+  final bool hivRiskNeverTested;
+  final bool hivRiskPartnerPositive;
+  final bool hivRiskUnprotectedSex;
+  final bool hivRiskStiTreatment;
+  final bool hivRiskRecurrentIllness;
+  final String? manualReferralReason;
+
   const RegisterPatientRequest({
     required this.fullName,
     required this.phoneNumber,
@@ -366,7 +435,28 @@ class RegisterPatientRequest {
     this.locationGeohash,
     required this.consentGiven,
     required this.consentVersion,
+    this.tbSymptomCough = false,
+    this.tbSymptomFever = false,
+    this.tbSymptomNightSweats = false,
+    this.tbSymptomWeightLoss = false,
+    this.tbSymptomChestPain = false,
+    this.hivRiskNeverTested = false,
+    this.hivRiskPartnerPositive = false,
+    this.hivRiskUnprotectedSex = false,
+    this.hivRiskStiTreatment = false,
+    this.hivRiskRecurrentIllness = false,
+    this.manualReferralReason,
   });
+
+  /// RBC 4-symptom TB screen (+ chest pain): any positive → presumptive TB.
+  bool get presumptiveTb =>
+      tbSymptomCough || tbSymptomFever || tbSymptomNightSweats ||
+      tbSymptomWeightLoss || tbSymptomChestPain;
+
+  /// Any HIV risk answer positive → eligible for an HIV testing referral.
+  bool get hivTestingReferral =>
+      hivRiskNeverTested || hivRiskPartnerPositive || hivRiskUnprotectedSex ||
+      hivRiskStiTreatment || hivRiskRecurrentIllness;
 
   /// Derives suspectedCondition from hivStatus + tbStatus for ScreenPatientRequest.
   String get suspectedCondition {
@@ -393,5 +483,21 @@ class RegisterPatientRequest {
         if (locationGeohash != null) 'locationGeohash': locationGeohash,
         'consentGiven': consentGiven,
         'consentVersion': consentVersion,
+        // RBC TB symptom screen (presumptiveTb recomputed server-side)
+        'tbSymptomCough': tbSymptomCough,
+        'tbSymptomFever': tbSymptomFever,
+        'tbSymptomNightSweats': tbSymptomNightSweats,
+        'tbSymptomWeightLoss': tbSymptomWeightLoss,
+        'tbSymptomChestPain': tbSymptomChestPain,
+        'presumptiveTb': presumptiveTb,
+        // HIV testing-eligibility risk screen (hivTestingReferral recomputed server-side)
+        'hivRiskNeverTested': hivRiskNeverTested,
+        'hivRiskPartnerPositive': hivRiskPartnerPositive,
+        'hivRiskUnprotectedSex': hivRiskUnprotectedSex,
+        'hivRiskStiTreatment': hivRiskStiTreatment,
+        'hivRiskRecurrentIllness': hivRiskRecurrentIllness,
+        'hivTestingReferral': hivTestingReferral,
+        if (manualReferralReason != null && manualReferralReason!.isNotEmpty)
+          'manualReferralReason': manualReferralReason,
       };
 }

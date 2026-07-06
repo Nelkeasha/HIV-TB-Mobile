@@ -48,10 +48,13 @@ class CHWRepository {
       adherenceStatus: req.adherenceStatus,
       pillCountRecorded: req.pillCountRecorded,
       pillCountExpected: req.pillCountExpected,
+      symptoms: req.symptoms,
       symptomsReported: req.symptomsReported,
       sideEffectsReported: req.sideEffectsReported,
       psychosocialNotes: req.psychosocialNotes,
       nextVisitDate: req.nextVisitDate,
+      adverseEventGrade: req.adverseEventGrade,
+      referralInitiated: req.referralInitiated,
       clientRequestId: req.clientRequestId ?? generateUuidV4(),
     );
 

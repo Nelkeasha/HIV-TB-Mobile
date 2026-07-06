@@ -1,7 +1,10 @@
 abstract class ApiEndpoints {
+  // Defaults to the live Render backend so a plain `flutter build apk` / `flutter run`
+  // works on a real device out of the box. For local dev against a backend on your PC,
+  // override with: --dart-define=BASE_URL=http://10.0.2.2:8080  (Android emulator)
   static const String baseUrl = String.fromEnvironment(
     'BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080',
+    defaultValue: 'https://hivtb-rw-api.onrender.com',
   );
 
   // Auth

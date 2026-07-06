@@ -39,6 +39,22 @@ class _RegisterPatientScreenState
   bool _hasSmartphone = false;
   int  _currentStep = 0;
 
+  // ── RBC TB symptom screen ──
+  bool _tbCough = false, _tbFever = false, _tbNightSweats = false,
+      _tbWeightLoss = false, _tbChestPain = false;
+  bool get _presumptiveTb =>
+      _tbCough || _tbFever || _tbNightSweats || _tbWeightLoss || _tbChestPain;
+
+  // ── Community HIV testing-eligibility risk screen ──
+  bool _hivNeverTested = false, _hivPartnerPositive = false,
+      _hivUnprotectedSex = false, _hivStiTreatment = false,
+      _hivRecurrentIllness = false;
+  bool get _hivTestingReferral =>
+      _hivNeverTested || _hivPartnerPositive || _hivUnprotectedSex ||
+      _hivStiTreatment || _hivRecurrentIllness;
+  bool _referAnyway = false;
+  final _referReasonCtrl = TextEditingController();
+
   String? _locationGeohash;
   bool _capturingLocation = false;
 
@@ -60,6 +76,7 @@ class _RegisterPatientScreenState
     _sectorCtrl.dispose();
     _districtCtrl.dispose();
     _notesCtrl.dispose();
+    _referReasonCtrl.dispose();
     super.dispose();
   }
 
@@ -112,6 +129,20 @@ class _RegisterPatientScreenState
         locationGeohash: _locationGeohash,
         consentGiven: _consentGiven,
         consentVersion: _kPatientConsentVersion,
+        tbSymptomCough: _tbCough,
+        tbSymptomFever: _tbFever,
+        tbSymptomNightSweats: _tbNightSweats,
+        tbSymptomWeightLoss: _tbWeightLoss,
+        tbSymptomChestPain: _tbChestPain,
+        hivRiskNeverTested: _hivNeverTested,
+        hivRiskPartnerPositive: _hivPartnerPositive,
+        hivRiskUnprotectedSex: _hivUnprotectedSex,
+        hivRiskStiTreatment: _hivStiTreatment,
+        hivRiskRecurrentIllness: _hivRecurrentIllness,
+        manualReferralReason:
+            (!_hivTestingReferral && _referAnyway && _referReasonCtrl.text.trim().isNotEmpty)
+                ? _referReasonCtrl.text.trim()
+                : null,
       );
 
       final result = await ref.read(chwRepositoryProvider).screenPatient(req);
@@ -507,7 +538,65 @@ class _RegisterPatientScreenState
                     },
                     onChanged: (v) => setState(() => _hivStatus = v!),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 18),
+
+                  // ── HIV testing-eligibility risk screen ──────────────────
+                  _ScreenHeader(title: l('hiv_risk_screen'), subtitle: l('hiv_risk_screen_sub')),
+                  _ScreenQuestion(
+                      text: l('hiv_q_never_tested'),
+                      value: _hivNeverTested,
+                      onChanged: (v) => setState(() => _hivNeverTested = v)),
+                  _ScreenQuestion(
+                      text: l('hiv_q_partner_positive'),
+                      value: _hivPartnerPositive,
+                      onChanged: (v) => setState(() => _hivPartnerPositive = v)),
+                  _ScreenQuestion(
+                      text: l('hiv_q_unprotected_sex'),
+                      value: _hivUnprotectedSex,
+                      onChanged: (v) => setState(() => _hivUnprotectedSex = v)),
+                  _ScreenQuestion(
+                      text: l('hiv_q_sti_treatment'),
+                      value: _hivStiTreatment,
+                      onChanged: (v) => setState(() => _hivStiTreatment = v)),
+                  _ScreenQuestion(
+                      text: l('hiv_q_recurrent_illness'),
+                      value: _hivRecurrentIllness,
+                      onChanged: (v) => setState(() => _hivRecurrentIllness = v)),
+                  if (_hivTestingReferral)
+                    _ScreenNotice(
+                        icon: Icons.local_hospital_rounded,
+                        text: l('hiv_testing_referral_notice'),
+                        color: AppColors.info)
+                  else ...[
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title: Text(l('refer_anyway'),
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      subtitle: Text(l('refer_anyway_sub'),
+                          style: const TextStyle(fontSize: 11)),
+                      value: _referAnyway,
+                      activeThumbColor: AppColors.info,
+                      onChanged: (v) => setState(() {
+                        _referAnyway = v;
+                        if (!v) _referReasonCtrl.clear();
+                      }),
+                    ),
+                    if (_referAnyway)
+                      TextFormField(
+                        controller: _referReasonCtrl,
+                        maxLength: 200,
+                        textCapitalization: TextCapitalization.sentences,
+                        validator: (v) =>
+                            _referAnyway ? Validators.required(v, l('refer_reason')) : null,
+                        decoration: InputDecoration(
+                          labelText: '${l('refer_reason')} *',
+                          hintText: l('refer_reason_hint'),
+                        ),
+                      ),
+                  ],
+                  const SizedBox(height: 18),
+
                   _DropdownField(
                     label: l('tb_status'),
                     value: _tbStatus,
@@ -520,7 +609,37 @@ class _RegisterPatientScreenState
                     },
                     onChanged: (v) => setState(() => _tbStatus = v!),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 18),
+
+                  // ── RBC TB symptom screen ────────────────────────────────
+                  _ScreenHeader(title: l('tb_symptom_screen'), subtitle: l('tb_symptom_screen_sub')),
+                  _ScreenQuestion(
+                      text: l('tb_q_cough'),
+                      value: _tbCough,
+                      onChanged: (v) => setState(() => _tbCough = v)),
+                  _ScreenQuestion(
+                      text: l('tb_q_fever'),
+                      value: _tbFever,
+                      onChanged: (v) => setState(() => _tbFever = v)),
+                  _ScreenQuestion(
+                      text: l('tb_q_night_sweats'),
+                      value: _tbNightSweats,
+                      onChanged: (v) => setState(() => _tbNightSweats = v)),
+                  _ScreenQuestion(
+                      text: l('tb_q_weight_loss'),
+                      value: _tbWeightLoss,
+                      onChanged: (v) => setState(() => _tbWeightLoss = v)),
+                  _ScreenQuestion(
+                      text: l('tb_q_chest_pain'),
+                      value: _tbChestPain,
+                      onChanged: (v) => setState(() => _tbChestPain = v)),
+                  if (_presumptiveTb)
+                    _ScreenNotice(
+                        icon: Icons.coronavirus_rounded,
+                        text: l('presumptive_tb_notice'),
+                        color: AppColors.riskCritical),
+                  const SizedBox(height: 18),
+
                   TextFormField(
                     controller: _notesCtrl,
                     maxLines: 3,
@@ -581,6 +700,86 @@ class _RegisterPatientScreenState
             ),
           ],
         ),
+    );
+  }
+}
+
+// ─── Structured screening helpers ─────────────────────────────────────────────
+
+class _ScreenHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  const _ScreenHeader({required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary)),
+          Text(subtitle,
+              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScreenQuestion extends StatelessWidget {
+  final String text;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  const _ScreenQuestion(
+      {required this.text, required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      visualDensity: const VisualDensity(vertical: -2),
+      title: Text(text, style: const TextStyle(fontSize: 13)),
+      value: value,
+      activeThumbColor: AppColors.primary,
+      onChanged: onChanged,
+    );
+  }
+}
+
+class _ScreenNotice extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+  const _ScreenNotice(
+      {required this.icon, required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text,
+                style: TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+          ),
+        ],
+      ),
     );
   }
 }
