@@ -46,11 +46,13 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
 
   // Card A — ART side effects: jaundice | neuropathy | vomiting | rash
   final Set<String> _artSE = {};
-  // Card B — DOT + TB side effects: jaundice | vomiting | jointPain | visionChanges | rash
-  bool _dotObserved = false;
+  // Card B — DOT + TB side effects: jaundice | vomiting | jointPain | visionChanges | rash.
+  // These are nullable (tri-state): null = the CHW never assessed it, so we send
+  // null and don't record an unassessed field as a definitive "No".
+  bool? _dotObserved;
   final Set<String> _tbSE = {};
-  bool _ventilationOk = false;
-  bool _coughHygieneOk = false;
+  bool? _ventilationOk;
+  bool? _coughHygieneOk;
   DateTime? _nextDotDate;
 
   void _toggle(Set<String> set, String code, bool on) =>
@@ -110,7 +112,9 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
 
     final anySideEffect = _artSE.isNotEmpty || _tbSE.isNotEmpty;
     final hasObservation = anySideEffect ||
-        _dotObserved ||
+        _dotObserved != null ||
+        _ventilationOk != null ||
+        _coughHygieneOk != null ||
         _notesCtrl.text.trim().isNotEmpty ||
         (_isHiv && _pillCountEnabled && _pillRecordedCtrl.text.trim().isNotEmpty) ||
         _adverseEventGrade != null ||
@@ -224,7 +228,14 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
       body: patientAsync.when(
         loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.primary)),
-        error: (_, __) => _buildForm(patientName: null, lang: lang, l: l),
+        // Don't render a degraded form: without the patient we don't know the
+        // diagnosis, so neither Card A nor Card B would show and the CHW would
+        // silently lose the ability to record DOT / side effects / pill count.
+        error: (_, __) => _LoadError(
+          message: l('patient_load_failed'),
+          retryLabel: l('retry'),
+          onRetry: () => ref.invalidate(patientDetailProvider(widget.patientId)),
+        ),
         data: (p) {
           _diagnosisType = p.diagnosisType;
           return _buildForm(patientName: p.fullName, lang: lang, l: l);
@@ -354,7 +365,7 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
                 _ToggleCard(
                   title: l('dot_observed'),
                   subtitle: l('dot_observed_sub'),
-                  value: _dotObserved,
+                  value: _dotObserved ?? false,
                   onChanged: (v) => setState(() => _dotObserved = v),
                   activeColor: AppColors.riskLow,
                 ),
@@ -374,7 +385,7 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
                 _ToggleCard(
                   title: l('home_ventilation_ok'),
                   subtitle: l('home_ventilation_sub'),
-                  value: _ventilationOk,
+                  value: _ventilationOk ?? false,
                   onChanged: (v) => setState(() => _ventilationOk = v),
                   activeColor: AppColors.riskLow,
                 ),
@@ -382,7 +393,7 @@ class _HomeVisitScreenState extends ConsumerState<HomeVisitScreen> {
                 _ToggleCard(
                   title: l('cough_hygiene_ok'),
                   subtitle: l('cough_hygiene_sub'),
-                  value: _coughHygieneOk,
+                  value: _coughHygieneOk ?? false,
                   onChanged: (v) => setState(() => _coughHygieneOk = v),
                   activeColor: AppColors.riskLow,
                 ),
@@ -862,6 +873,47 @@ class _CardHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Load Error (patient fetch failed) ────────────────────────────────────────
+
+class _LoadError extends StatelessWidget {
+  final String message;
+  final String retryLabel;
+  final VoidCallback onRetry;
+  const _LoadError({
+    required this.message,
+    required this.retryLabel,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_rounded, size: 48, color: AppColors.textHint),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: Text(retryLabel),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            ),
+          ],
+        ),
       ),
     );
   }

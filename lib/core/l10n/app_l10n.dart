@@ -22,6 +22,7 @@ abstract class AppL10n {
     'loading':     {'en': 'Loading…',        'fr': 'Chargement…',     'rw': 'Kwakira…'},
     'please_wait': {'en': 'Please wait…',    'fr': 'Veuillez patienter…', 'rw': 'Tegereza…'},
     'retry':       {'en': 'Try again',       'fr': 'Réessayer',       'rw': 'Ongera Ugerageze'},
+    'patient_load_failed': {'en': 'Could not load this patient. Check your connection and try again.', 'fr': 'Impossible de charger ce patient. Vérifiez votre connexion et réessayez.', 'rw': 'Ntibishoboye gutangiza uyu murwayi. Reba interineti hanyuma wongere ugerageze.'},
     'refresh':     {'en': 'Refresh',         'fr': 'Actualiser',      'rw': 'Vugurura'},
     'cancel':      {'en': 'Cancel',          'fr': 'Annuler',         'rw': 'Hagarika'},
     'confirm':     {'en': 'Confirm',         'fr': 'Confirmer',       'rw': 'Emeza'},
