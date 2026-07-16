@@ -43,14 +43,13 @@ abstract class AppDateUtils {
   }
 
   /// The backend's `LocalDateTime` fields (e.g. visitDate with @Past) are
-  /// timezone-naive and compared against the server's own UTC clock. Sending
-  /// the device's local wall-clock value as-is makes "now" look like it's in
-  /// the future for any timezone ahead of UTC (e.g. Rwanda, UTC+2) — this
-  /// strips the offset by re-expressing the same instant as a UTC wall-clock
-  /// value, with no 'Z' suffix, so it parses straight into LocalDateTime and
-  /// compares correctly against the server's now().
+  /// timezone-naive and compared against the server clock, which
+  /// TimeZoneConfig pins to Africa/Kigali — the same wall-clock time as the
+  /// device. So send the local wall-clock as-is, minus a small buffer so
+  /// minor device/server clock skew can't trip the @Past validation.
+  /// (Previously this converted to UTC, which stored every visit 2 hours in
+  /// the past and put visits recorded before 02:00 on the previous day.)
   static DateTime nowForServer() {
-    final utc = DateTime.now().toUtc();
-    return DateTime(utc.year, utc.month, utc.day, utc.hour, utc.minute, utc.second, utc.millisecond);
+    return DateTime.now().subtract(const Duration(minutes: 1));
   }
 }
